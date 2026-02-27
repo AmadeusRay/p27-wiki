@@ -1,0 +1,2635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Options Pricing Library</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fafafa; color: #1a1a2e; display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar (matches p27-wiki.html) ── */
+#sidebar { width: 280px; min-width: 280px; background: #fff; border-right: 1px solid #e0e0e0; overflow-y: auto; padding: 0; display: flex; flex-direction: column; }
+#sidebar-header { padding: 12px 16px 16px; border-bottom: 1px solid #e0e0e0; }
+#sidebar-header h1 { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+#sidebar-header p { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 0.7rem; }
+.legend-item { display: flex; align-items: center; gap: 4px; color: #546E7A; }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+#sidebar-tree { flex: 1; overflow-y: auto; padding: 4px 0; display: flex; flex-direction: column; }
+.tree-node { display: flex; align-items: center; font-size: 0.82rem; line-height: 1.35; border-right: 3px solid transparent; transition: background 0.15s; }
+.tree-node:hover { background: #f1f5f9; }
+.tree-node.active { font-weight: 600; }
+.tree-prefix { font-family: monospace; color: #94a3b8; white-space: pre; font-size: 0.8rem; margin-right: 2px; user-select: none; flex-shrink: 0; }
+.tree-dot { width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; flex-shrink: 0; }
+.tree-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-children { display: block; }
+
+/* ── Flow chain line: bold left border connecting the main pipeline sections ── */
+.flow-chain { border-left: 3.5px solid #455A64; margin-left: 5px; position: relative; }
+.flow-chain-end { border-left: 3.5px solid #455A64; margin-left: 5px; border-bottom-left-radius: 8px; position: relative; }
+.flow-chain > .tree-node, .flow-chain-end > .tree-node { position: relative; }
+.flow-chain > .tree-node::before, .flow-chain-end > .tree-node::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  width: 10px;
+  height: 3px;
+  background: #455A64;
+  border-radius: 1px;
+}
+.flow-chain .tree-children { margin-left: 0; }
+
+/* ── Main Content ── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#topbar { padding: 12px 24px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: flex-start; }
+#topbar-left h2 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.tag-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+#breadcrumbs { font-size: 12px; color: #78909C; margin-top: 2px; }
+#breadcrumbs a { color: #1565C0; text-decoration: none; cursor: pointer; }
+#description { font-size: 13px; color: #546E7A; margin-top: 2px; }
+#context-bar { padding: 8px 24px; background: #f8fafc; border-bottom: 1px solid #e8e8e8; font-size: 13px; color: #334155; line-height: 1.5; }
+#context-bar:empty { display: none; }
+#view-toggle { display: none; gap: 4px; align-items: center; background: #f0f0f0; border-radius: 8px; padding: 3px; }
+#view-toggle.visible { display: flex; }
+#view-toggle button { border: none; background: transparent; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: #546E7A; transition: all 0.15s; }
+#view-toggle button.active { background: #fff; color: #1a1a2e; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+#zoom-bar { display: flex; align-items: center; gap: 6px; padding: 6px 24px; background: #fafafa; border-bottom: 1px solid #e8e8e8; }
+#zoom-bar button { width: 28px; height: 28px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; cursor: pointer; font-size: 16px; font-weight: 600; color: #546E7A; display: flex; align-items: center; justify-content: center; }
+#zoom-bar button:hover { background: #f0f0f0; }
+#zoom-slider { width: 120px; height: 4px; accent-color: #1565C0; }
+#zoom-level { font-size: 12px; color: #78909C; min-width: 36px; text-align: center; font-variant-numeric: tabular-nums; }
+#zoom-fit { font-size: 11px !important; width: auto !important; padding: 4px 10px !important; font-weight: 500 !important; }#diagram-area { flex: 1; overflow: hidden; position: relative; cursor: grab; min-height: 0; }
+#info-cards-wrapper { max-height: 200px; overflow-y: auto; border-top: 1px solid #e0e0e0; flex-shrink: 0; }
+#diagram-area.dragging { cursor: grabbing; }
+#diagram-viewport { position: absolute; top: 0; left: 0; transform-origin: 0 0; padding: 16px 24px; }
+#diagram-container { width: max-content; }
+.click-hint { text-align: center; color: #B0BEC5; font-size: 13px; margin-bottom: 8px; }
+
+/* ── Component Panel (permanent right sidebar) ── */
+#panel-backdrop { display: none; }
+#component-panel { width: 480px; min-width: 480px; background: #fff; border-left: 1px solid #e0e0e0; overflow-y: auto; display: none; flex-direction: column; }
+#component-panel.open { display: flex; }
+#panel-header { padding: 16px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: flex-start; }
+#panel-title { font-size: 18px; font-weight: 700; }
+#panel-desc { font-size: 13px; color: #546E7A; margin-top: 2px; }
+#flow-notes { padding: 8px 16px; background: #f8fafc; border-bottom: 1px solid #e8e8e8; font-size: 12px; color: #475569; line-height: 1.5; max-height: 80px; overflow-y: auto; }
+#flow-notes .fn-item { padding: 4px 8px; background: #f1f5f9; border-radius: 4px; margin-bottom: 4px; }
+#panel-tabs { display: flex; border-bottom: 1px solid #e0e0e0; padding: 0 20px; gap: 0; }
+#panel-tabs button { border: none; background: transparent; padding: 10px 16px; font-size: 13px; cursor: pointer; color: #78909C; border-bottom: 2px solid transparent; font-weight: 500; }
+#panel-tabs button.active { color: #1565C0; border-bottom-color: #1565C0; }
+#panel-content { padding: 20px; font-size: 14px; line-height: 1.7; }
+#panel-content code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 0.9em; font-family: "JetBrains Mono", "Fira Code", monospace; }
+#panel-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; font-size: 13px; line-height: 1.5; }
+#panel-content pre code { background: transparent; color: inherit; padding: 0; }
+#panel-content table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+#panel-content th, #panel-content td { border: 1px solid #e0e0e0; padding: 6px 10px; text-align: left; }
+#panel-content th { background: #f8fafc; font-weight: 600; }
+.panel-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #78909C; margin: 16px 0 6px; font-weight: 600; }
+.panel-section-title:first-child { margin-top: 0; }
+.ref-list { font-size: 12px; color: #546E7A; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0; }
+.ref-list li { margin-bottom: 4px; }
+.ref-tag { font-size: 0.8em; cursor: help; padding: 1px 4px; border-radius: 3px; font-weight: 600; font-style: normal; }
+.conn-row { display: flex; gap: 8px; align-items: center; padding: 4px 0; font-size: 13px; }
+.conn-arrow { color: #1a1a2e; font-size: 13px; font-weight: 600; }
+.wiki-link { color: #1565C0; cursor: pointer; text-decoration: none; font-weight: 600; }
+.wiki-link:hover { text-decoration: underline; }
+
+/* ── SVG styling ── */
+#diagram-container svg { min-height: 500px; }
+.clickable-node { cursor: pointer !important; }
+.clickable-node:hover { filter: brightness(0.95); }
+
+/* ── KaTeX in SVG nodes: prevent clipping after KaTeX replaces Unicode ── */
+#diagram-container foreignObject { overflow: visible; }
+#diagram-container foreignObject > div { overflow: visible !important; }
+#diagram-container .ktx .katex { font-size: 0.95em; }
+#diagram-container .ktx { white-space: nowrap; }
+/* Fix KaTeX sqrt radical visibility inside SVG foreignObject */
+#diagram-container .katex .sqrt-sign svg { overflow: visible !important; display: inline !important; }
+#diagram-container .katex .sqrt-sign { display: inline-block; }
+
+/* ── KaTeX in panel ── */
+.katex { font-size: 1em; }
+.katex-display { margin: 8px 0; overflow-x: auto; }
+
+/* ── Info Cards (below diagram) ── */
+#info-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; padding: 12px 24px 16px; }
+.info-card { background: #fff; border-radius: 8px; padding: 14px 16px; border-left: 4px solid #ccc; box-shadow: 0 1px 2px rgba(0,0,0,0.06); cursor: pointer; transition: box-shadow 0.15s; }
+.info-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.info-card h4 { font-size: 0.88rem; margin-bottom: 5px; color: #1a1a2e; }
+.info-card p { font-size: 0.8rem; color: #555; line-height: 1.5; margin: 0; }
+.info-card .card-source { font-size: 0.72rem; color: #888; margin-top: 6px; }
+.info-card.highlight { animation: cardPulse 1.2s ease-out; }
+@keyframes cardPulse { 0% { box-shadow: 0 0 0 3px rgba(21,101,192,0.5); } 100% { box-shadow: 0 1px 2px rgba(0,0,0,0.06); } }
+
+/* ── Panel model cards (for theory-map) ── */
+.panel-model-card { border-left: 4px solid #ccc; border-radius: 6px; margin-bottom: 10px; background: #fafafa; overflow: hidden; }
+.panel-model-card .pmc-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1a1a2e; }
+.panel-model-card .pmc-header:hover { background: #f0f0f0; }
+.panel-model-card .pmc-toggle { font-size: 11px; color: #78909C; transition: transform 0.2s; }
+.panel-model-card .pmc-toggle.collapsed { transform: rotate(-90deg); }
+.panel-model-card .pmc-body { padding: 0 14px 12px; font-size: 12px; color: #475569; line-height: 1.6; }
+.panel-model-card .pmc-body.hidden { display: none; }
+.panel-model-card .pmc-flow-link { display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 600; color: #1565C0; cursor: pointer; text-decoration: none; }
+.panel-model-card .pmc-flow-link:hover { text-decoration: underline; }
+.panel-model-card.highlight { animation: cardPulse 1.2s ease-out; }
+.panel-back { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #78909C; cursor: pointer; margin-bottom: 8px; border: none; background: none; padding: 0; }
+.panel-back:hover { color: #1565C0; }
+
+/* ── Callout banners (above info cards) ── */
+.callout-banner { display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px; margin: 0 24px 0; border-radius: 6px; font-size: 0.82rem; line-height: 1.5; }
+.callout-banner .callout-icon { font-weight: 700; flex-shrink: 0; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+.callout-banner .callout-text { color: #334155; }
+.callout-banner.sim-gotcha, .callout-banner.ta-notes, .callout-banner.also-called { background: #E3F2FD; border-left: 3px solid #1565C0; }
+.callout-banner .callout-icon { background: #1565C0; color: #fff; }
+.callout-table { border-collapse: collapse; margin: 4px 0 0; font-size: 0.8rem; }
+.callout-table th, .callout-table td { border: 1px solid #cbd5e1; padding: 4px 10px; text-align: left; }
+.callout-table th { background: rgba(0,0,0,0.05); font-weight: 600; }
+.callout-table tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.callout-cite { margin-left: 6px; font-size: 0.75rem; color: #78909C; font-style: italic; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>Project 27 Info Hub</h1>
+    <p>Stock Options Pricing Library</p>
+  </div>
+  <div id="sidebar-tree"></div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="topbar">
+    <div id="topbar-left">
+      <div id="breadcrumbs"></div>
+      <h2 id="flow-title"></h2>
+      <div id="description"></div>
+    </div>
+    <div id="view-toggle">
+      <button class="active" data-view="overview">Overview</button>
+      <button data-view="theory">Theory</button>
+      <button data-view="formula">Formula</button>
+      <button data-view="code">Code</button>
+    </div>
+  </div>
+  <div id="context-bar"></div>
+  <div id="zoom-bar">
+    <button id="zoom-out" title="Zoom out">&minus;</button>
+    <input type="range" id="zoom-slider" min="30" max="250" value="100" step="5">
+    <button id="zoom-in" title="Zoom in">+</button>
+    <span id="zoom-level">100%</span>
+    <button id="zoom-fit" title="Fit diagram to view">Fit</button>
+  </div>
+  <div id="diagram-area">
+    <div id="diagram-viewport">
+      <div class="click-hint" id="click-hint"></div>
+      <div id="diagram-container"></div>
+    </div>
+  </div>
+  <div id="callout-area" style="flex-shrink:0;display:none;"></div>
+  <div id="info-cards-wrapper">
+    <div id="info-cards"></div>
+  </div>
+</div>
+
+<!-- Component Panel (permanent right sidebar) -->
+<div id="component-panel">
+  <div id="panel-header">
+    <div>
+      <button id="panel-back" class="panel-back" style="display:none;" onclick="panelGoBack()">&#8592; Back</button>
+      <div id="panel-title"></div>
+      <div id="panel-desc"></div>
+    </div>
+  </div>
+  <div id="flow-notes" style="display:none;"></div>
+  <div id="panel-tabs">
+    <button class="active" data-tab="formula">Formula</button>
+    <button data-tab="theory">Theory</button>
+    <button data-tab="code">Code</button>
+    <button data-tab="traces">Traces</button>
+    <button data-tab="connections">Connections</button>
+  </div>
+  <div id="panel-content"></div>
+</div>
+
+<script>
+// ── Data (parsed from vault) ──
+const FLOWS = [
+  {
+    "id": "bsm-internal",
+    "title": "BSM Internal",
+    "description": "Level 1a: <span class='ktx' data-b64='ZF8x'>d₁</span>, <span class='ktx' data-b64='ZF8y'>d₂</span>, <span class='ktx' data-b64='XFBoaQ=='>Φ</span> lookup, price assembly, put-call parity.",
+    "tag": "bsm",
+    "mermaid": "graph TD\n\ninputs[\"Shared Inputs\"]\ninputs --> calc[\"d1 and d2\"]\ncalc --> prob[\"Probability Lookup\"]\nprob --> price[\"Price Assembly\"]\nprice --> parity[\"Put-Call Parity\"]\nparity --> out[\"BSM Exact Price\"]\nout --> r1[\"Standalone pricer\"]\nout --> r2[\"Validation benchmark\"]\nout --> r3[\"CV anchor for MC\"]\nout --> r4[\"Greeks baseline\"]\n\nstyle inputs fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20\nstyle calc fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle prob fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle price fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle parity fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle out fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle r1 fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle r2 fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle r3 fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle r4 fill:#ECEFF1,stroke:#546E7A,color:#263238",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "P4F1e ch3; Hull ch15",
+        "text": "<span class='ktx' data-b64='ZF8x'>d₁</span> and <span class='ktx' data-b64='ZF8y'>d₂</span> are not probabilities <span class='ktx' data-b64='XFBoaShkXzEp'>Φ(d₁)</span> and <span class='ktx' data-b64='XFBoaShkXzIp'>Φ(d₂)</span> are probabilities. <span class='ktx' data-b64='ZF8x'>d₁</span> and <span class='ktx' data-b64='ZF8y'>d₂</span> are z-scores."
+      }
+    ],
+    "context": "d1 = [ln(S0/K) + (r + 0.5 sigma^2)T] / (sigma sqrt T). d2 = d1 - sigma sqrt T. Call = S0 Phi(d1) - K e^(-rT) Phi(d2). BSM serves 4 roles: standalone pricer, validation benchmark, control variate anchor, Greeks baseline."
+  },
+  {
+    "id": "binomial-internal",
+    "title": "Binomial Internal",
+    "description": "Level 1c: Tree parameters, forward pass, backward roll, convergence.",
+    "tag": "binom",
+    "mermaid": "graph TD\n\ninputs[\"Shared Inputs\"]\ninputs --> params[\"Tree Parameters\"]\nparams --> forward[\"Forward Pass\"]\nforward --> terminal[\"Terminal Payoffs\"]\nterminal --> backward[\"Backward Pass\"]\nbackward --> euro[\"European\"]\nbackward --> amer[\"American\"]\neuro --> price[\"Tree Price\"]\namer --> price\nprice --> convergence[\"Convergence to BSM\"]\n\nstyle inputs fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20\nstyle params fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle forward fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle terminal fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle backward fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle euro fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle amer fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle price fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle convergence fill:#E3F2FD,stroke:#1565C0,color:#0D47A1",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "Hull ch13; M10L4-L5",
+        "text": "American option advantage Binomial is the natural model for American options. The backward pass at every node asks \"exercise now or hold?\""
+      }
+    ],
+    "context": "u = up factor, d = down, p = risk-neutral prob. Forward: S branches S*u and S*d. Terminal payoffs: max(S-K,0) or max(K-S,0). Backward: European always discounts; American compares exercise vs hold at each node. As n -> infinity, converges to BSM."
+  },
+  {
+    "id": "greeks",
+    "title": "Greeks",
+    "description": "Shared layer: <span class='ktx' data-b64='XERlbHRhLCBcR2FtbWEsIFxUaGV0YSwgXG51LCBccmhv'>Δ, Γ, Θ, ν, ρ</span> across all three models.",
+    "tag": "shared",
+    "mermaid": "graph TD\n\nprice[\"Option Price\"]\n\nprice --> bsmg\nprice --> mcg\nprice --> bining\n\nsubgraph bsmg[\"BSM Greeks: Analytical\"]\n    direction TB\n    bsm_d[\"Delta\"]\n    bsm_g[\"Gamma\"]\n    bsm_t[\"Theta\"]\n    bsm_v[\"Vega\"]\n    bsm_r[\"Rho\"]\nend\n\nsubgraph mcg[\"MC Greeks: Bump and Reprice\"]\n    direction TB\n    mc_fix[\"Fix Random Seed\"]\n    mc_bump[\"Finite Difference\"]\n    mc_ci[\"CIs on Greeks\"]\n    mc_fix --> mc_bump --> mc_ci\nend\n\nsubgraph bining[\"Binomial Greeks\"]\n    direction TB\n    bin_bump[\"Bump and Reprice\"]\n    bin_det[\"Deterministic\"]\n    bin_bump --> bin_det\nend\n\nbsmg --> exact[\"Exact\"]\nmcg --> noisy[\"Noisy\"]\nbining --> det[\"Deterministic\"]\n\nstyle bsm_d fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle bsm_g fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle bsm_t fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle bsm_v fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle bsm_r fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle mc_fix fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle mc_bump fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle mc_ci fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle bin_bump fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle bin_det fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle exact fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle noisy fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle det fill:#ECEFF1,stroke:#546E7A,color:#263238",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "P4F ch12; M10L7",
+        "text": "MC Greeks need fixed seed If you don't fix the seed, noise from different random draws swamps the bump signal."
+      }
+    ],
+    "context": "BSM: analytical formulas (exact). MC: bump-and-reprice with fixed seed (noisy, needs CIs). Binomial: bump-and-reprice, rebuild tree (deterministic). MC Greeks MUST fix random seed or noise swamps signal. 5 Greeks = ~10 extra MC runs."
+  },
+  {
+    "id": "lsm-american",
+    "title": "LSM American",
+    "description": "Deep dive: Forward simulate, backward regress, exercise decision.",
+    "tag": "mc",
+    "mermaid": "graph TD\n\ninputs[\"Shared Inputs + paths, time steps\"] --> forward\n\nsubgraph forward[\"Forward Phase\"]\n    direction TB\n    f1[\"Generate Paths\"]\n    f2[\"S at every dt\"]\n    f1 --> f2\nend\n\nsubgraph backward[\"Backward Phase\"]\n    direction TB\n    b1[\"Start at T-dt\"]\n    b2[\"In-the-Money Paths\"]\n    b3[\"Regress Continuation\"]\n    b4[\"Exercise Decision\"]\n    b1 --> b2 --> b3 --> b4\nend\n\nsubgraph output[\"Price Assembly\"]\n    direction TB\n    o1[\"Collect Payoffs\"]\n    o2[\"Discount to t=0\"]\n    o3[\"American Price\"]\n    o1 --> o2 --> o3\nend\n\nforward --> backward\nbackward --> output\n\noutput --> vr[\"Variance Reduction\"]\noutput --> oa[\"Output Analysis\"]\n\nstyle f1 fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle f2 fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle b1 fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle b2 fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle b3 fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle b4 fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle o1 fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle o2 fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle o3 fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle vr fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle oa fill:#ECEFF1,stroke:#546E7A,color:#263238",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "Longstaff-Schwartz 2001; P4F ch12",
+        "text": "Why LSM is hard You need the optimal exercise strategy but can't know it without future prices. LSM approximates via regression."
+      }
+    ],
+    "context": "Forward: generate n stock price paths using GBM Euler steps. Backward: at each step, find in-the-money paths, regress continuation value E[hold|S] using polynomial (Longstaff-Schwartz). Exercise if intrinsic > continuation. Collect optimal payoffs, discount to t=0, average."
+  },
+  {
+    "id": "mc-foundation",
+    "title": "MC Foundation",
+    "description": "Deep dive: Uniforms to Box-Muller to <span class='ktx' data-b64='Wg=='>Z</span> to GBM to stock price.",
+    "tag": "mc",
+    "mermaid": "graph TD\n\nunif[\"Uniform RNs\"]\n\nunif --> boxm[\"Box-Muller Transform\"]\n\nboxm --> z[\"Z ~ N(0,1)\"]\n\nz --> gbm[\"GBM Formula\"]\n\ngbm --> stock[\"Simulated Stock Price\"]\n\nbm[\"Brownian Motion\"] -.->|\"justifies\"| gbm\n\nstyle unif fill:#FFECB3,stroke:#FF8F00,color:#E65100\nstyle boxm fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle z fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle gbm fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle stock fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle bm fill:#ECEFF1,stroke:#546E7A,color:#263238",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "P4F ch12; M3L2; Hull ch14",
+        "text": "The <span class='ktx' data-b64='LVx0ZnJhY3sxfXsyfVxzaWdtYV4y'>-(1)/(2)σ²</span> Ito correction Without it, <span class='ktx' data-b64='RVtTKFQpXSBcbmVxIFNfMCBlXntyVH0='>E[S(T)] ≠ S₀ erT</span> under risk-neutral measure. Comes from Ito's lemma on <span class='ktx' data-b64='XGxuIFM='>ln S</span>."
+      }
+    ],
+    "context": "S(T) = S0 exp[(r - 0.5 sigma^2)T + sigma sqrt(T) Z]. Brownian Motion is why GBM works but you never call it directly. The -0.5 sigma^2 is from Ito's lemma."
+  },
+  {
+    "id": "mc-internal",
+    "title": "MC Internal",
+    "description": "Level 1b: Foundation, Pricing Engine, Variance Reduction, Output Analysis.",
+    "tag": "mc",
+    "mermaid": "graph TD\n\ninputs[\"Shared Inputs\"] --> foundation\n\nsubgraph foundation[\"Foundation\"]\n    direction TB\n    boxm[\"Box-Muller\"]\n    bm[\"Brownian Motion\"]\n    gbm[\"GBM\"]\n    boxm --> bm --> gbm\nend\n\nsubgraph engine[\"Pricing Engine\"]\n    direction TB\n    stat[\"European Static\"]\n    dyna[\"Asian / Barrier\"]\n    amer[\"American LSM\"]\nend\n\nsubgraph vr[\"Variance Reduction\"]\n    direction TB\n    av[\"Antithetic Variates\"]\n    cv[\"Control Variates\"]\nend\n\nsubgraph output[\"Output Analysis\"]\n    direction TB\n    ci[\"Confidence Intervals\"]\n    conv[\"Convergence\"]\nend\n\nfoundation --> engine\nengine --> vr\nvr --> output\noutput --> val[\"Validate vs BSM\"]\n\nstyle boxm fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle bm fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle gbm fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle stat fill:#FFECB3,stroke:#FF8F00,color:#E65100\nstyle dyna fill:#FFECB3,stroke:#FF8F00,color:#E65100\nstyle amer fill:#FFECB3,stroke:#FF8F00,color:#E65100\nstyle av fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle cv fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle ci fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle conv fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle val fill:#E3F2FD,stroke:#1565C0,color:#0D47A1",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "P4F ch12",
+        "text": "Static vs Dynamic MC Static = draw endpoint from exact distribution. European only. Dynamic = Euler discretization. Path-dependent options."
+      }
+    ],
+    "context": "Foundation: Uniform RNs -> Box-Muller -> Z Normal -> GBM -> stock prices. Engine: 3 pricers (static endpoint, dynamic Euler path, LSM American). VR: antithetic + control variates. Output: CIs + convergence. MC is the only model with randomness."
+  },
+  {
+    "id": "model-comparison",
+    "title": "Model Comparison",
+    "description": "How the three models compete on each option type.",
+    "tag": "shared",
+    "mermaid": "graph TD\n\nstart[\"Validation Ladder\"]\n\nstart --> euro_test[\"European Test\"]\n\neuro_test --> euro_q{\"All three match?\"}\neuro_q -->|\"Yes\"| validated[\"Validated\"]\neuro_q -->|\"No\"| debug[\"Debug\"]\n\nvalidated --> amer_test[\"American Test\"]\n\namer_test --> amer_q{\"MC and Binomial converge?\"}\namer_q -->|\"Yes\"| amer_done[\"American Confirmed\"]\namer_q -->|\"No\"| amer_debug[\"Check LSM / Tree\"]\n\namer_done --> asian_test[\"Asian Test\"]\n\nasian_test --> asian_q{\"CI narrows?\"}\nasian_q -->|\"Yes\"| asian_done[\"Asian Working\"]\nasian_q -->|\"No\"| asian_debug[\"Check Paths\"]\n\nstyle start fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle euro_test fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle amer_test fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle asian_test fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle validated fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle amer_done fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle asian_done fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle debug fill:#FFCDD2,stroke:#C62828,color:#B71C1C\nstyle amer_debug fill:#FFCDD2,stroke:#C62828,color:#B71C1C\nstyle asian_debug fill:#FFCDD2,stroke:#C62828,color:#B71C1C",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "Hull ch13; P4F ch12",
+        "text": "Why BSM can't do American or Asian BSM assumes European exercise. American breaks with early exercise. Asian breaks with path-dependent payoff."
+      }
+    ],
+    "context": "Build order follows validation logic. European first (all three models, BSM is ground truth). American next (MC LSM vs Binomial, BSM assists as control variate). Asian last (MC only, validated by CI convergence)."
+  },
+  {
+    "id": "output-analysis",
+    "title": "Output Analysis",
+    "description": "Deep dive: CI construction, width check, more paths or VR. MC only.",
+    "tag": "shared",
+    "mermaid": "graph TD\n\nmc_result[\"MC Price Estimate\"]\n\nmc_result --> ci[\"Confidence Interval\"]\n\nci --> check{\"CI width OK?\"}\n\ncheck -->|\"Too wide\"| more[\"More Paths\"]\n\ncheck -->|\"Too wide\"| vr_apply[\"Apply VR\"]\n\nmore --> ci\nvr_apply --> ci\n\ncheck -->|\"Acceptable\"| done[\"Final Price with CI\"]\n\ndone --> greeks_ci[\"CIs on each Greek too\"]\n\nstyle mc_result fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle ci fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle check fill:#FFF9C4,stroke:#F9A825,color:#F57F17\nstyle more fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle vr_apply fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle done fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle greeks_ci fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "M10L7; Law ch9; M3L2-L3",
+        "text": "Convergence rate To halve CI width, need <span class='ktx' data-b64='NFx0aW1lcw=='>4×</span> simulations. One more decimal <span class='ktx' data-b64='PSAxMDBcdGltZXM='>= 100×</span> simulations."
+      }
+    ],
+    "context": "theta-hat +/- z S/sqrt(n), z=1.96 for 95% CI. To halve CI width: 4x paths. VR (antithetic + control variates) reduces variance without more paths. Every MC Greek also needs its own CI."
+  },
+  {
+    "id": "program-architecture",
+    "title": "Program Architecture",
+    "description": "How Python calls Python. Pricer, Greeks, Output layers.",
+    "tag": "shared",
+    "mermaid": "graph TD\n\nuser[\"User Input\"]\n\nuser --> dispatch{\"Which model?\"}\n\ndispatch --> bsm_pricer[\"BSM Pricer\"]\n\ndispatch --> mc_pricer[\"MC Pricer\"]\n\ndispatch --> bin_pricer[\"Binomial Pricer\"]\n\nbsm_pricer --> bsm_greeks[\"BSM Greeks\"]\nmc_pricer --> mc_greeks[\"MC Greeks\"]\nbin_pricer --> bin_greeks[\"Binomial Greeks\"]\n\nmc_pricer --> vr_layer[\"VR Layer\"]\nvr_layer --> mc_greeks\n\nmc_greeks --> oa_layer[\"Output Analysis\"]\n\nbsm_greeks --> results[\"Results\"]\noa_layer --> results\nbin_greeks --> results\n\nresults --> compare[\"Model Comparison\"]\n\nstyle bsm_pricer fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle bsm_greeks fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle mc_pricer fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle mc_greeks fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle vr_layer fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle oa_layer fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle bin_pricer fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle bin_greeks fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle dispatch fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle user fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle results fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle compare fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "P4F ch12; P27 project spec",
+        "text": "Architecture principle Each model is self-contained: pricer <span class='ktx' data-b64='XHRv'>→</span> Greeks <span class='ktx' data-b64='XHRv'>→</span> output. Only cross-model link is BSM feeding MC's control variate."
+      }
+    ],
+    "context": "Each model is self-contained: pricer -> Greeks -> output. Only cross-model dependency: BSM feeds MC's control variate. VR and Output Analysis only apply to MC (the only noisy model)."
+  },
+  {
+    "id": "project-scope",
+    "title": "Project Scope",
+    "description": "European, American, Asian. What's in, what's deferred.",
+    "tag": "shared",
+    "mermaid": "graph TD\n\nsubgraph euro[\"European: All Three Compete\"]\n    direction LR\n    e_bsm[\"BSM\"]\n    e_mc[\"MC\"]\n    e_bin[\"Binomial\"]\nend\n\nsubgraph amer[\"American: Two Compete\"]\n    direction LR\n    a_bsm[\"BSM\"]\n    a_mc[\"MC LSM\"]\n    a_bin[\"Binomial\"]\nend\n\nsubgraph asian[\"Asian: MC Only\"]\n    direction LR\n    as_bsm[\"BSM\"]\n    as_mc[\"MC Dynamic\"]\n    as_bin[\"Binomial\"]\nend\n\nsubgraph defer[\"Deferred\"]\n    direction LR\n    barrier[\"Barrier\"]\n    lookback[\"Lookback\"]\nend\n\nstyle e_bsm fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle e_mc fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle e_bin fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle a_mc fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle a_bin fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle as_mc fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle a_bsm fill:#FFCDD2,stroke:#C62828,color:#B71C1C\nstyle as_bsm fill:#FFCDD2,stroke:#C62828,color:#B71C1C\nstyle as_bin fill:#FFCDD2,stroke:#C62828,color:#B71C1C\nstyle barrier fill:#ECEFF1,stroke:#546E7A,color:#263238\nstyle lookback fill:#ECEFF1,stroke:#546E7A,color:#263238",
+    "callouts": [],
+    "context": "European: all 3 models. American: MC (LSM) + Binomial (BSM can't, assumes no early exercise). Asian: MC only (path-dependent, BSM can't, Binomial has no direct pricer). Barrier and Lookback deferred."
+  },
+  {
+    "id": "theory-map",
+    "title": "Theory Map",
+    "description": "Level 0: The three pricing models and how they relate.",
+    "tag": "shared",
+    "mermaid": "graph TD\n\ninputs[\"Shared Inputs\"]\n\ninputs --> bsm[\"BSM Analytical\"]\n\ninputs --> mc[\"Monte Carlo\"]\n\ninputs --> binom[\"Binomial Tree\"]\n\nbsm --> greeks[\"Greeks\"]\nmc --> greeks\nbinom --> greeks\n\ngreeks --> compare[\"Model Comparison\"]\n\nbsm -.-> benchcv[\"Benchmark + CV\"]\nbenchcv -.-> mc\n\nstyle benchcv fill:#ECEFF1,stroke:#546E7A,color:#263238\n\nstyle inputs fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20\nstyle bsm fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\nstyle mc fill:#FFF3E0,stroke:#E65100,color:#BF360C\nstyle binom fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C\nstyle greeks fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20\nstyle compare fill:#ECEFF1,stroke:#546E7A,color:#263238",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "P4F ch12; Hull ch13-15",
+        "text": "Continuous vs Discrete > | Model | Nature | Why | |-------|--------|-----| | BSM | Continuous, exact | Analytical solution to continuous SDE | | MC static | Continuous, sampled | Draws from exact distribution | | MC dynamic | Continuous, discretized | Euler scheme | | Binomial | Discrete | Lattice of up/down jumps |"
+      }
+    ],
+    "context": "S0, K, r, sigma, T are shared inputs. BSM is exact (European only). MC handles everything (noisy). Binomial is discrete lattice (handles early exercise). BSM also serves as benchmark/control variate for MC."
+  },
+  {
+    "id": "variance-reduction",
+    "title": "Variance Reduction",
+    "description": "Deep dive: Antithetic variates + control variates.",
+    "tag": "shared",
+    "mermaid": "graph TD\n\nmc[\"MC Path Generation\"]\n\nmc --> av_start\nmc --> cv_start\n\nsubgraph av[\"Antithetic Variates\"]\n    direction TB\n    av_start[\"Generate Z\"]\n    av_mirror[\"Also use -Z\"]\n    av_avg[\"Average Estimates\"]\n    av_var[\"Variance Shrinks\"]\n    av_start --> av_mirror --> av_avg --> av_var\nend\n\nsubgraph cv[\"Control Variates\"]\n    direction TB\n    cv_start[\"Paired Sim, Same Z\"]\n    cv_known[\"BSM Exact Price\"]\n    cv_correct[\"Correction Formula\"]\n    cv_astar[\"Optimal a*\"]\n    cv_result[\"Reduced Variance\"]\n    cv_start --> cv_known --> cv_correct --> cv_astar --> cv_result\nend\n\nav --> reduced[\"Reduced Estimate\"]\ncv --> reduced\n\nreduced --> output[\"Output Analysis\"]\n\nstyle av_start fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle av_mirror fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle av_avg fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle av_var fill:#FCE4EC,stroke:#C62828,color:#B71C1C\nstyle cv_start fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle cv_known fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle cv_correct fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle cv_astar fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle cv_result fill:#E8EAF6,stroke:#283593,color:#1A237E\nstyle reduced fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20\nstyle output fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20",
+    "callouts": [
+      {
+        "type": "also-called",
+        "source": "M10L8; Law ch9; P4F ch12",
+        "text": "SAME random numbers for CV Without shared <span class='ktx' data-b64='Wg=='>Z</span>, there is no correlation and the correction is noise."
+      }
+    ],
+    "context": "Antithetic: generate Z, also use -Z, average the two estimates. Internal method, no outside info. Control: run paired sim with BSM anchor, corrected = X - a*(Y - mu_Y). Needs SAME random numbers. Can combine both."
+  }
+];
+const VIEWS = {
+  "MC Internal |Code": "graph TD\n    inputs[\"S0, K, r, sigma, T<br>M = paths, I = steps\"]\n\n    inputs --> foundation\n\n    subgraph foundation[\"Foundation Layer\"]\n        direction TB\n        boxm[\"gen_sn(M, I, anti_paths=True)<br>returns: (M, I) array of Z ~ N(0,1)<br>if anti_paths: first half Z, second half -Z<br>[P4F ch12]\"]\n        bm[\"(no direct function)<br>BM is implicit in the Z draws<br>Donsker's theorem operates in background\"]\n        gbm[\"S0 <i> np.exp(drift + diffusion)<br>drift = (r - 0.5 </i> sigma**2) <i> dt<br>diffusion = sigma </i> np.sqrt(dt) <i> Z<br>[P4F ch12]\"]\n        boxm --> bm --> gbm\n    end\n\n    subgraph engine[\"Pricing Engine\"]\n        direction TB\n        stat[\"gbm_mcs_stat(K, option='call')<br>draws S_T in one shot, no loop<br>returns: e^(-rT) </i> mean(payoff)<br>[P4F ch12]\"]\n        dyna[\"gbm_mcs_dyna(K, option='call')<br>Euler loop over I time steps<br>stores full path S[t] for averaging<br>[P4F ch12]\"]\n        amer[\"gbm_mcs_amer(K, option='put')<br>forward: Euler paths like dyna<br>backward: np.polyfit regression<br>[P4F ch12]\"]\n    end\n\n    subgraph vr[\"Variance Reduction\"]\n        direction TB\n        av[\"anti_paths=True in gen_sn()<br>auto-generates Z and -Z<br>halves effective variance<br>[P4F ch12]\"]\n        cv[\"bsm_call_value(S0, K, T, r, sigma)<br>control = mc_euro - bsm_exact<br>corrected = mc_target - a_star <i> control<br>[P4F1e ch3 + M10L8]\"]\n    end\n\n    subgraph output[\"Output Analysis\"]\n        direction TB\n        ci[\"scipy.stats.norm.interval(0.95)<br>or manual: mean +/- 1.96 </i> std / sqrt(n)<br>[M10L7]\"]\n        conv[\"check: CI_width < tolerance<br>or: abs(mc - bsm) < epsilon<br>[M3L2-L3]\"]\n    end\n\n    val[\"assert abs(mc_price - bsm_price) < tol<br>bsm_call_value() as ground truth<br>[P4F1e ch3]\"]\n\n    foundation --> engine\n    engine --> vr\n    vr --> output\n    output --> val\n\n    click boxm \"_P2/Box-Muller Transform#Code\"\n    click gbm \"_P2/GBM#Code\"\n    click stat \"_P2/MC European Static#Code\"\n    click dyna \"_P2/MC Path-Dependent#Code\"\n    click amer \"_P2/LSM: American Option Pricing#Code\"\n    click av \"_P2/Antithetic Variates#Code\"\n    click cv \"_P2/Control Variates#Code\"\n    click ci \"_P2/Output Analysis#Code\"\n    click val \"_P2/BSM Closed-Form#Code\"\n\n    classDef found fill:#FFF3E0,stroke:#E65100,color:#BF360C\n    classDef eng fill:#FFECB3,stroke:#FF8F00,color:#E65100\n    classDef vrStyle fill:#FCE4EC,stroke:#C62828,color:#B71C1C\n    classDef outStyle fill:#E8EAF6,stroke:#283593,color:#1A237E\n    classDef valStyle fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\n\n    class bm,boxm,gbm found\n    class stat,dyna,amer eng\n    class av,cv vrStyle\n    class ci,conv outStyle\n    class val valStyle",
+  "MC Internal |Formula": "graph TD\n    inputs[\"SHARED INPUTS<br>S₀ · K · r · σ · T\"]\n\n    inputs --> foundation\n\n    subgraph foundation[\"Foundation Layer\"]\n        direction TB\n        boxm[\"Z₁ = √(-2 ln U₁) cos(2π U₂)<br>Z₂ = √(-2 ln U₁) sin(2π U₂)<br>U₁, U₂ ~ Uniform(0,1)\"]\n        bm[\"W(t) - W(s) ~ N(0, t-s)<br>W(0) = 0<br>independent increments\"]\n        gbm[\"S(T) = S₀ exp[(r - σ²/2)T + σ√T · Z]<br>Z ~ N(0,1)\"]\n        boxm --> bm --> gbm\n    end\n\n    subgraph engine[\"Pricing Engine\"]\n        direction TB\n        stat[\"European: e⁻ʳᵀ · (1/n) Σ max(Sᵢ(T) - K, 0)<br>one Z per path, no time steps\"]\n        dyna[\"Asian: e⁻ʳᵀ · (1/n) Σ max(S̄ᵢ - K, 0)<br>S̄ = (1/m) Σ S(tⱼ)<br>Euler: S(t+Δt) = S(t) exp[(r-σ²/2)Δt + σ√Δt · Zₜ]\"]\n        amer[\"American: E[e⁻ʳᵗ<i> · payoff(S(t</i>))]<br>t<i> = optimal exercise time<br>continuation ≈ β₀ + β₁S + β₂S²\"]\n    end\n\n    subgraph vr[\"Variance Reduction\"]\n        direction TB\n        av[\"Antithetic:<br>θ̂ = (θ̂_Z + θ̂_(-Z)) / 2<br>Var(θ̂) = ½[Var(θ̂₁) + Cov(θ̂₁, θ̂₂)]\"]\n        cv[\"Control:<br>X_c = X - a</i>(Y - μ_Y)<br>a* = Cov(X,Y) / Var(Y)<br>Var(X_c) = (1 - ρ²_XY) Var(X)\"]\n    end\n\n    subgraph output[\"Output Analysis\"]\n        direction TB\n        ci[\"CI: θ̂ ± z_{α/2} · S / √n<br>95%: z = 1.96\"]\n        conv[\"Error ~ 1/√n<br>halve error = 4x paths\"]\n    end\n\n    val[\"Validate: MC price → BSM price<br>as n → ∞ for European\"]\n\n    foundation --> engine\n    engine --> vr\n    vr --> output\n    output --> val\n\n    click boxm \"_P2/Box-Muller Transform\"\n    click gbm \"_P2/GBM\"\n    click bm \"_P2/GBM\"\n    click stat \"_P2/MC European Static\"\n    click dyna \"_P2/MC Path-Dependent\"\n    click amer \"_P2/LSM: American Option Pricing\"\n    click av \"_P2/Antithetic Variates\"\n    click cv \"_P2/Control Variates\"\n    click ci \"_P2/Output Analysis\"\n    click val \"_P2/BSM Closed-Form\"\n\n    classDef found fill:#FFF3E0,stroke:#E65100,color:#BF360C\n    classDef eng fill:#FFECB3,stroke:#FF8F00,color:#E65100\n    classDef vrStyle fill:#FCE4EC,stroke:#C62828,color:#B71C1C\n    classDef outStyle fill:#E8EAF6,stroke:#283593,color:#1A237E\n    classDef valStyle fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\n\n    class bm,boxm,gbm found\n    class stat,dyna,amer eng\n    class av,cv vrStyle\n    class ci,conv outStyle\n    class val valStyle",
+  "MC Internal |Theory": "graph TD\n    inputs[\"Five inputs define the contract<br>S₀ K r σ T are observable<br>no model-specific parameters here\"]\n\n    inputs --> foundation\n\n    subgraph foundation[\"Foundation Layer\"]\n        direction TB\n        boxm[\"Computers only generate Uniform(0,1)<br>Need N(0,1) for everything downstream<br>Polar coordinates exploit circular symmetry<br>of the bivariate normal density\"]\n        bm[\"Continuous, starts at 0, independent increments<br>Nowhere differentiable (no smooth paths)<br>Donsker: scaled random walk converges to BM<br>Theoretical basis, never called in code\"]\n        gbm[\"Stock prices can't go negative: exp() enforces this<br>r replaces μ: risk-neutral pricing<br>-σ²/2 correction: Ito's lemma on ln S<br>Full derivation beyond course scope\"]\n        boxm --> bm --> gbm\n    end\n\n    subgraph engine[\"Pricing Engine\"]\n        direction TB\n        stat[\"Draw from exact endpoint distribution<br>No discretization error<br>Only works when payoff depends on S(T) alone<br>European vanilla: payoff = max(S(T)-K, 0)\"]\n        dyna[\"Euler chops continuous SDE into Δt steps<br>Introduces discretization bias (shrinks with more steps)<br>Required when payoff depends on path<br>Asian: average price. Barrier: crossing check\"]\n        amer[\"Can't know optimal exercise without knowing future<br>LSM approximates continuation value via regression<br>Backward induction on simulated paths<br>Approximation of an approximation\"]\n    end\n\n    subgraph vr[\"Variance Reduction\"]\n        direction TB\n        av[\"Z and -Z are negatively correlated<br>Average of correlated estimates has lower variance<br>Only works for monotonic payoffs<br>Butterfly spreads can make it worse\"]\n        cv[\"Use a known answer (BSM) as anchor<br>Same random numbers for both sims<br>Correction removes correlated noise<br>Near-perfect correlation eliminates nearly all variance\"]\n    end\n\n    subgraph output[\"Output Analysis\"]\n        direction TB\n        ci[\"MC estimates are random variables<br>A price without error bars is a guess<br>CI width tells you how much to trust the result<br>BSM and Binomial don't need this (deterministic)\"]\n        conv[\"CLT: error ~ 1/√n<br>Halve error = 4x paths<br>VR is cheaper than brute-force more paths<br>This is why VR matters\"]\n    end\n\n    val[\"European: MC must converge to BSM<br>If it doesn't, the MC implementation has a bug<br>BSM is ground truth for European vanilla<br>No ground truth for exotics (use convergence behavior)\"]\n\n    foundation --> engine\n    engine --> vr\n    vr --> output\n    output --> val\n\n    click boxm \"_P2/Box-Muller Transform#Theory\"\n    click gbm \"_P2/GBM#Theory\"\n    click bm \"_P2/GBM#Theory\"\n    click stat \"_P2/MC European Static#Theory\"\n    click dyna \"_P2/MC Path-Dependent#Theory\"\n    click amer \"_P2/LSM: American Option Pricing#Theory\"\n    click av \"_P2/Antithetic Variates#Theory\"\n    click cv \"_P2/Control Variates#Theory\"\n    click ci \"_P2/Output Analysis#Theory\"\n    click val \"_P2/BSM Closed-Form#Theory\"\n\n    classDef found fill:#FFF3E0,stroke:#E65100,color:#BF360C\n    classDef eng fill:#FFECB3,stroke:#FF8F00,color:#E65100\n    classDef vrStyle fill:#FCE4EC,stroke:#C62828,color:#B71C1C\n    classDef outStyle fill:#E8EAF6,stroke:#283593,color:#1A237E\n    classDef valStyle fill:#E3F2FD,stroke:#1565C0,color:#0D47A1\n\n    class bm,boxm,gbm found\n    class stat,dyna,amer eng\n    class av,cv vrStyle\n    class ci,conv outStyle\n    class val valStyle"
+};
+const COMPONENTS = [
+  {
+    "id": "antithetic-variates",
+    "title": "Antithetic Variates",
+    "description": "Variance reduction by pairing each path with its mirror. For every $Z \\sim N(0,1)$ path, also simulate $-Z$. The paired estimate $\\hat{\\theta} = (\\hat{\\theta}_Z + \\hat{\\theta}_{-Z})/2$ has lower variance because $\\text{Cov}(\\hat{\\theta}_Z, \\hat{\\theta}_{-Z}) < 0$. Cuts variance nearly in half for monotonic payoffs. [^1]",
+    "formula": "$$\n\\hat\\theta = \\frac{\\hat\\theta_Z + \\hat\\theta_{-Z}}{2}\n$$\n\n$$\n\\text{Var}(\\hat\\theta) = \\frac{1}{2}\\left[\\text{Var}(\\hat\\theta_1) + \\text{Cov}(\\hat\\theta_1, \\hat\\theta_2)\\right]\n$$\n\nSince $\\hat\\theta_1$ and $\\hat\\theta_2$ are negatively correlated, $\\text{Cov} < 0$, so variance decreases. [^1]\n\n| Symbol | Meaning |\n|--------|---------|\n| $\\hat\\theta_Z$ | Estimate from original $Z$ draws |\n| $\\hat\\theta_{-Z}$ | Estimate from negated $Z$ draws |\n| $\\text{Cov}(\\hat\\theta_1, \\hat\\theta_2)$ | Negative when payoff is monotonic in $Z$ |\n\n---",
+    "theory": "\"If $Z$ produces a high stock price, $-Z$ produces a low one. Averaging reduces variance because the errors partially cancel.\" [^1]\n\nWorks for monotonic payoffs (calls, puts). For non-monotonic payoffs, the negative correlation may not hold. [^2]\n\nSame total paths; just split into $Z$ and $-Z$ halves. No extra simulation cost. [^1]\n\n---",
+    "code": "Antithetic variates are built directly into `gen_sn()` via the `anti_paths` flag. No separate function needed. [^3]\n\n```python\n# P4F ch12, In [64]: antithetic logic inside gen_sn()\nif anti_paths is True:\n    sn = npr.standard_normal((M + 1, int(I / 2)))\n    sn = np.concatenate((sn, -sn), axis=1)\nelse:\n    sn = npr.standard_normal((M + 1, I))\n```\n\n> Generates $I/2$ paths of $Z$, then appends $-Z$. Total still $I$ paths. All pricing functions call `gen_sn()` with `anti_paths=True` by default.\n\n---",
+    "traces": "All pricing functions use `gen_sn(M, I, anti_paths=True)` by default: antithetic is always on unless explicitly disabled. [^3]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "Box-Muller-Transform",
+        "how": "Provides $Z$; antithetic negates to $-Z$"
+      },
+      {
+        "direction": "To",
+        "component": "All pricing functions",
+        "how": "Applied via `gen_sn()` flag"
+      },
+      {
+        "direction": "Pairs with",
+        "component": "Control-Variates",
+        "how": "Can combine both VR techniques"
+      },
+      {
+        "direction": "To",
+        "component": "Output-Analysis",
+        "how": "Tighter CI from reduced variance"
+      }
+    ],
+    "references": [
+      {
+        "key": "M10L7",
+        "citation": "ISYE 6644, Module 10, Lesson 7: Antithetic Random Numbers."
+      },
+      {
+        "key": "Law ch9",
+        "citation": "Law, A.M. *Simulation Modeling and Analysis*. Ch. 9: Variance Reduction."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "bsm-closed-form",
+    "title": "BSM Closed-Form",
+    "description": "Black-Scholes-Merton analytical formula. The exact European option price. MC must converge to this: if not, there's a bug.",
+    "formula": "**Call and put prices:** [^1]\n\n$$\n\\begin{aligned}\nC &= S_0\\,N(d_1) - K\\,e^{-rT}\\,N(d_2) \\\\[4pt]\nP &= K\\,e^{-rT}\\,N(-d_2) - S_0\\,N(-d_1)\n\\end{aligned}\n$$\n\nwhere: [^1]\n\n$$\nd_1 = \\frac{\\ln(S_0/K) + (r + \\tfrac{1}{2}\\sigma^2)T}{\\sigma\\sqrt{T}}, \\quad d_2 = d_1 - \\sigma\\sqrt{T}\n$$\n\n| Symbol | Meaning |\n|--------|---------|\n| $N(\\cdot)$ | Standard normal CDF |\n| $d_1$ | Adjusted log-moneyness + drift |\n| $d_2$ | $d_1$ minus total volatility |\n| $S_0 N(d_1)$ | Delta-weighted stock position |\n| $K e^{-rT} N(d_2)$ | Strike-weighted bond position |\n\n**Put-call parity:** $C - P = S_0 - K\\,e^{-rT}$ [^1]\n\n---",
+    "theory": "Assumes: constant $r$, constant $\\sigma$, continuous trading, no dividends, no transaction costs, stock follows GBM. [^1]\n\nDerived by constructing a riskless portfolio (delta hedge) and applying no-arbitrage. [^1] Original derivation in Black & Scholes 1973. [^2]\n\nBSM is exact for European options only. Does not apply to: Americans (early exercise), Asians (path-dependent payoff), barriers. [^1] [^3]\n\n---",
+    "code": "### `bsm_call_value()` [^4]\n\n```python\n# P4F1e ch3, Example 3-1: bsm_functions.py\ndef bsm_call_value(S0, K, T, r, sigma):\n    ''' Valuation of European call option in BSM model.\n    Analytical formula.\n    '''\n    from math import log, sqrt, exp\n    from scipy import stats\n    S0 = float(S0)\n    d1 = (log(S0 / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))\n    d2 = (log(S0 / K) + (r - 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))\n    value = (S0 * stats.norm.cdf(d1, 0.0, 1.0)\n                - K * exp(-r * T) * stats.norm.cdf(d2, 0.0, 1.0))\n    return value\n```\n\n### `bsm_vega()` [^4]\n\n```python\n# P4F1e ch3, Example 3-1\ndef bsm_vega(S0, K, T, r, sigma):\n    ''' Vega of European option in BSM model. '''\n    from math import log, sqrt\n    from scipy import stats\n    S0 = float(S0)\n    d1 = (log(S0 / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))\n    vega = S0 * stats.norm.cdf(d1, 0.0, 1.0) * sqrt(T)\n    return vega\n```\n\n### Ch12 imports Ch3 [^5]\n\n```python\n# P4F ch12, In [72]\nfrom bsm_functions import bsm_call_value\n```\n\n> `bsm_functions.py` = the ch3 code as a module. Ch12 imports it for validation and control variates. This is the bridge between the two chapters.\n\n---",
+    "traces": "$S_0 = 42$, $K = 40$, $r = 0.10$, $\\sigma = 0.20$, $T = 0.5$ [^1]\n\n$d_1 = 0.7693$, $d_2 = 0.6278$ [^1]\n\n$C = 42 \\times 0.7791 - 40 \\times e^{-0.05} \\times 0.7349 = 4.76$ [^1]\n\nP4F ch12 validation: BSM vs MC across $K = 80 \\ldots 120$: \"All valuation differences are smaller than 1% absolutely.\" [^5]\n\n---",
+    "connections": [
+      {
+        "direction": "To",
+        "component": "Control-Variates",
+        "how": "Provides $\\mu_Y$ (exact known price)"
+      },
+      {
+        "direction": "To",
+        "component": "Output-Analysis",
+        "how": "MC must converge to BSM for Europeans"
+      },
+      {
+        "direction": "Shares SDE with",
+        "component": "GBM",
+        "how": "BSM solves analytically what MC solves numerically"
+      }
+    ],
+    "references": [
+      {
+        "key": "Hull ch15",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 15: The BSM Model."
+      },
+      {
+        "key": "BS 1973",
+        "citation": "Black, F. & Scholes, M. (1973). The Pricing of Options and Corporate Liabilities."
+      },
+      {
+        "key": "Hull ch21",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 21: Basic Numerical Procedures."
+      },
+      {
+        "key": "P4F1e ch3",
+        "citation": "Hilpisch, Y. *Python for Finance*, 1e. Ch. 3: Introductory Examples."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "binomial-tree",
+    "title": "Binomial Tree",
+    "description": "Discrete-time option pricing model. Stock price moves up by $u$ or down by $d$ each step. Works backward from expiry to today. Handles early exercise (American options).",
+    "formula": "### Tree Parameters (Cox-Ross-Rubinstein Model) [^1]\n\n$$\nu = e^{\\sigma\\sqrt{\\Delta t}}, \\quad d = e^{-\\sigma\\sqrt{\\Delta t}} = \\frac{1}{u}\n$$\n\n$$\na = e^{(r-q)\\Delta t}, \\quad p = \\frac{a - d}{u - d}\n$$\n\n| Symbol | Meaning |\n|--------|---------|\n| $u$ | Up factor (multiplicative) |\n| $d$ | Down factor ($= 1/u$, tree recombines) |\n| $a$ | Growth factor per step |\n| $p$ | Risk-neutral probability of up move |\n| $\\Delta t$ | Time step length ($T/N$) |\n| $q$ | Continuous dividend yield (0 for non-dividend stock) |\n\n### Stock Price at Node $(i, j)$ [^1]\n\n$$\nS_{i,j} = S_0 u^j d^{i-j} = S_0 u^{2j - i}\n$$\n\nA tree with $N$ steps has $N + 1$ terminal nodes. The tree recombines: up-then-down = down-then-up.\n\n### Working Backward: European [^1]\n\nAt terminal nodes: $f_{N,j} = \\max(S_{N,j} - K, 0)$ for calls, $\\max(K - S_{N,j}, 0)$ for puts.\n\nAt earlier nodes:\n\n$$\nf_{i,j} = e^{-r\\Delta t}\\left[p \\cdot f_{i+1, j+1} + (1-p) \\cdot f_{i+1, j}\\right]\n$$\n\n### Working Backward: American [^1]\n\nAt each node, compare exercising now vs holding:\n\n$$\nf_{i,j} = \\max\\!\\left\\{h_{i,j},\\; e^{-r\\Delta t}[p \\cdot f_{i+1,j+1} + (1-p) \\cdot f_{i+1,j}]\\right\\}\n$$\n\nwhere $h_{i,j}$ is the intrinsic value (exercise payoff) at that node.\n\n### Control Variate for Trees [^1]\n\nPrice both American ($f_A$) and European ($f_E$) on the same tree, correct with BSM:\n\n$$\nf_A^{\\text{improved}} = f_A + (f_{\\text{BSM}} - f_E)\n$$\n\n---",
+    "theory": "Binomial trees discretize the life of an option into $N$ small time steps. At each step, the stock either goes up by $u$ or down by $d$. The CRR model chooses parameters so the tree matches the mean and variance of stock returns in a risk-neutral world. [^1]\n\n**Key capability:** American options. At each node you compare the value of exercising immediately versus holding. BSM cannot do this. [^1]\n\n**Recombining tree:** up-then-down = down-then-up ($S_0 u d = S_0$). This keeps the tree manageable: $N + 1$ nodes at step $N$, not $2^N$. [^1]\n\n**Convergence:** As $N \\to \\infty$, tree price converges to BSM price. In practice, $N = 30$ gives reasonable results. Convergence oscillates (not monotonic). [^1]\n\n**Not every ITM node should be exercised early.** Hull's Example 21.1 shows that at node B ($S = 39.69$, put payoff = $10.31$), the holding value is $10.36$, so you should NOT exercise. The early-exercise check must compare intrinsic value against discounted continuation value at every node. [^1]\n\n---",
+    "code": "No verbatim code from P4F ch12: Hilpisch implements MC but not binomial trees. The tree must be implemented from Hull's algorithm. [^1]\n\n**Pseudocode for CRR American put:**\n\n```python\n# Hull ch21 algorithm: to be implemented\nimport numpy as np\n\ndef binomial_american_put(S0, K, r, sigma, T, N, q=0):\n    dt = T / N\n    u = np.exp(sigma * np.sqrt(dt))\n    d = 1 / u\n    a = np.exp((r - q) * dt)\n    p = (a - d) / (u - d)\n    disc = np.exp(-r * dt)\n    \n    # Terminal payoffs\n    ST = S0 * u ** np.arange(N, -1, -1) * d ** np.arange(0, N + 1, 1)\n    V = np.maximum(K - ST, 0)\n    \n    # Backward induction with early exercise\n    for i in range(N - 1, -1, -1):\n        Si = S0 * u ** np.arange(i, -1, -1) * d ** np.arange(0, i + 1, 1)\n        V_hold = disc * (p * V[:i+1] + (1 - p) * V[1:i+2])\n        V_exercise = np.maximum(K - Si, 0)\n        V = np.maximum(V_hold, V_exercise)\n    \n    return V[0]\n```\n\n---",
+    "traces": "### Worked Example: American Put (Hull Example 21.1) [^1]\n\n$S_0 = 50$, $K = 50$, $r = 0.10$, $\\sigma = 0.40$, $T = 5/12$, $N = 5$\n\n**Parameters:**\n\n$\\Delta t = 1/12 = 0.0833$, $u = 1.1224$, $d = 0.8909$, $a = 1.0084$, $p = 0.5073$\n\n**Terminal payoffs (put):**\n\n| $S$ at expiry | 89.07 | 70.70 | 56.12 | 44.55 | 35.36 | 28.07 |\n|---------------|-------|-------|-------|-------|-------|-------|\n| Payoff | 0 | 0 | 0 | 5.45 | 14.64 | 21.93 |\n\n**Early exercise check at node A** ($S = 39.69$):\n\nHolding value = $e^{-0.10 \\times 0.0833} \\times [0.5073 \\times 5.45 + 0.4927 \\times 14.64] = 9.90$\n\nIntrinsic value = $\\max(50 - 39.69, 0) = 10.31$\n\n**Exercise early.** $f = 10.31$ (intrinsic > holding)\n\n**Option value: 4.49** [^1]\n\n### Greeks from tree (Example 21.2) [^1]\n\n$\\Delta = (2.16 - 6.96) / (56.12 - 44.55) = -0.41$\n\n$\\Gamma = [(0.64-3.77)/(62.99-50) - (3.77-10.36)/(50-39.69)] / 11.65 = 0.03$\n\n$\\Theta = (3.77 - 4.49) / (2 \\times 0.0833) = -4.3$ per year\n\nWith 50 steps: $\\Delta = -0.415$, $\\Gamma = 0.034$, $\\Theta = -0.0117$. [^1]\n\n### Control variate example [^1]\n\n$f_A = 4.49$, $f_E = 4.32$, $f_{\\text{BSM}} = 4.08$\n\nCorrected: $4.49 + (4.08 - 4.32) = 4.25$. True value (100 steps): 4.278.\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "Shared-Inputs",
+        "how": "$S_0, K, r, \\sigma, T$"
+      },
+      {
+        "direction": "Compared to",
+        "component": "BSM-Closed-Form",
+        "how": "Tree converges to BSM as $N \\to \\infty$"
+      },
+      {
+        "direction": "Compared to",
+        "component": "LSM-American",
+        "how": "Both price Americans; cross-validate"
+      },
+      {
+        "direction": "To",
+        "component": "Greeks",
+        "how": "Delta, Gamma, Theta from tree nodes; Vega, Rho from rebuild"
+      }
+    ],
+    "references": [
+      {
+        "key": "Hull ch21",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*, 11e. Ch. 21: Basic Numerical Procedures. pp. 448-487."
+      }
+    ]
+  },
+  {
+    "id": "box-muller-transform",
+    "title": "Box-Muller Transform",
+    "description": "Converts two $U(0,1)$ uniform random numbers into two $N(0,1)$ standard normals using $Z_1 = \\sqrt{-2\\ln U_1}\\cos(2\\pi U_2)$. This is the bridge between what a computer can generate (uniforms) and what GBM needs (normals). First step in every MC simulation path. [^1][^2]",
+    "formula": "$$\n\\begin{aligned}\nZ_1 &= \\sqrt{-2\\ln(U_1)}\\,\\cos(2\\pi U_2) \\\\[4pt]\nZ_2 &= \\sqrt{-2\\ln(U_1)}\\,\\sin(2\\pi U_2)\n\\end{aligned}\n$$\n\nwhere $U_1, U_2 \\sim \\text{Uniform}(0,1)$ independent. [^1]\n\n| Symbol | Meaning |\n|--------|---------|\n| $U_1, U_2$ | Independent Uniform(0,1) draws |\n| $Z_1, Z_2$ | Independent $N(0,1)$ outputs |\n| $\\sqrt{-2\\ln(U_1)}$ | Radial component (Rayleigh distributed) |\n| $2\\pi U_2$ | Angular component, uniform on $[0, 2\\pi]$ |\n\nTwo uniforms in, two normals out. [^1]\n\n---",
+    "theory": "The joint density of two independent standard normals is circularly symmetric: $f(z_1, z_2) = \\frac{1}{2\\pi}e^{-(z_1^2 + z_2^2)/2}$. In polar coordinates, $r$ is Rayleigh and $\\theta$ is uniform on $[0, 2\\pi]$. Box-Muller generates $r$ from $U_1$ via inverse CDF and $\\theta$ from $U_2$, then converts to Cartesian. [^1]\n\n\"An understanding of the proof behind why Box-Muller works is beyond the scope of this course.\" [^1]\n\nThe normal CDF $\\Phi$ has no closed-form inverse. Direct inversion would require numerical approximation. Box-Muller avoids this by working in polar coordinates where inversion is exact. [^1]\n\n---",
+    "code": "The project uses `gen_sn()` as the single entry point for all normal random number generation. It wraps NumPy's `standard_normal` (Ziggurat internally, not raw Box-Muller) but the conceptual foundation is Box-Muller. [^2]\n\n```python\n# P4F ch12, In [64]\ndef gen_sn(M, I, anti_paths=True, mo_match=True):\n    ''' Function to generate random numbers for simulation.\n    Parameters\n    ==========\n    M: int\n        number of time intervals for discretization\n    I: int\n        number of paths to be simulated\n    anti_paths: boolean\n        use of antithetic variates\n    mo_match: boolean\n        use of moment matching\n    '''\n    if anti_paths is True:\n        sn = npr.standard_normal((M + 1, int(I / 2)))\n        sn = np.concatenate((sn, -sn), axis=1)\n    else:\n        sn = npr.standard_normal((M + 1, I))\n    if mo_match is True:\n        sn = (sn - sn.mean()) / sn.std()\n    return sn\n```\n\n> This single function feeds every pricing function in the project: `gbm_mcs_stat()`, `gbm_mcs_dyna()`, `gbm_mcs_amer()`.\n\n---",
+    "traces": "Manual example: [^1]\n\n$U_1 = 0.3$, $U_2 = 0.7$\n\n$r = \\sqrt{-2\\ln(0.3)} = \\sqrt{2.408} = 1.552$\n\n$\\theta = 2\\pi \\times 0.7 = 4.398$ rad\n\n$Z_1 = 1.552 \\times \\cos(4.398) = -0.480$\n\n$Z_2 = 1.552 \\times \\sin(4.398) = -1.476$\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "Computer RNG",
+        "how": "Provides $U_1, U_2 \\sim \\text{Uniform}(0,1)$"
+      },
+      {
+        "direction": "To",
+        "component": "GBM",
+        "how": "Provides $Z \\sim N(0,1)$ for diffusion term"
+      },
+      {
+        "direction": "To",
+        "component": "Antithetic-Variates",
+        "how": "`anti_paths=True` negates $Z$ to $-Z$"
+      }
+    ],
+    "references": [
+      {
+        "key": "M7L12",
+        "citation": "ISYE 6644, Module 7, Lesson 12: Box-Muller Normal RVs."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "control-variates",
+    "title": "Control Variates",
+    "description": "Variance reduction by anchoring the MC estimate to a known analytical answer. Run MC on the target option AND a European vanilla using the SAME random numbers. The BSM exact price serves as the control: $\\hat{X}_c = \\hat{X} - a^*(\\hat{Y} - \\mu_Y)$. Corrected variance: $\\text{Var}(\\hat{X}_c) = (1 - \\rho^2)\\text{Var}(\\hat{X})$. Requires shared $Z$; without it, the correction is noise. [^1][^2]",
+    "formula": "$$\n\\begin{aligned}\nX_c &= X - a^*(Y - \\mu_Y) \\\\[4pt]\na^* &= \\frac{\\text{Cov}(X, Y)}{\\text{Var}(Y)} \\\\[4pt]\n\\text{Var}(X_c) &= (1 - \\rho_{XY}^2)\\,\\text{Var}(X)\n\\end{aligned}\n$$\n\n[^1]\n\n| Symbol | Meaning |\n|--------|---------|\n| $X$ | MC estimate (target, e.g. exotic price) |\n| $Y$ | MC estimate of control (e.g. European call via MC) |\n| $\\mu_Y$ | Known exact value of control (e.g. BSM price) |\n| $a^*$ | Optimal control coefficient |\n| $\\rho_{XY}$ | Correlation between target and control |\n\n---",
+    "theory": "\"Use a known answer (BSM) as an anchor. Run both the target and the control with the same random numbers. The correction removes correlated noise.\" [^1]\n\nKey requirement: $Y$ must be simulated with the **same** $Z$ draws as $X$. Same random numbers means the errors are correlated. [^1]\n\nThe higher $|\\rho_{XY}|$, the greater the variance reduction. When $\\rho = 0$, no benefit. [^2]\n\n---",
+    "code": "### `bsm_call_value()` provides $\\mu_Y$ [^3]\n\n```python\n# P4F1e ch3, Example 3-1\ndef bsm_call_value(S0, K, T, r, sigma):\n    ''' Valuation of European call option in BSM model.\n    Analytical formula.\n    '''\n    from math import log, sqrt, exp\n    from scipy import stats\n    S0 = float(S0)\n    d1 = (log(S0 / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))\n    d2 = (log(S0 / K) + (r - 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))\n    value = (S0 * stats.norm.cdf(d1, 0.0, 1.0)\n                - K * exp(-r * T) * stats.norm.cdf(d2, 0.0, 1.0))\n    return value\n```\n\n### Validation pattern [^4]\n\n```python\n# P4F ch12, In [72]-[74]\nfrom bsm_functions import bsm_call_value\n\nstat_res = []\ndyna_res = []\nanal_res = []\nk_list = np.arange(80., 120.1, 5.)\nnp.random.seed(100)\nfor K in k_list:\n    stat_res.append(gbm_mcs_stat(K))\n    dyna_res.append(gbm_mcs_dyna(K))\n    anal_res.append(bsm_call_value(S0, K, T, r, sigma))\n```\n\n> `bsm_call_value` lives in `bsm_functions.py` (ch3 code) and is imported by ch12. This is how the two chapters plug together as one project.\n\n---",
+    "traces": "\"All valuation differences are smaller than 1% absolutely.\" [^4]\n\nValidation plot shows MC (static and dynamic) tracking BSM across strikes 80-120. [^4]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "BSM-Closed-Form",
+        "how": "Provides $\\mu_Y$ (exact known price) via `bsm_call_value()`"
+      },
+      {
+        "direction": "Pairs with",
+        "component": "Antithetic-Variates",
+        "how": "Can combine both VR techniques"
+      },
+      {
+        "direction": "To",
+        "component": "Output-Analysis",
+        "how": "Tighter CI from reduced variance"
+      }
+    ],
+    "references": [
+      {
+        "key": "M10L8",
+        "citation": "ISYE 6644, Module 10, Lesson 8: Control Variates."
+      },
+      {
+        "key": "Law ch9",
+        "citation": "Law, A.M. *Simulation Modeling and Analysis*. Ch. 9: Variance Reduction."
+      },
+      {
+        "key": "P4F1e ch3",
+        "citation": "Hilpisch, Y. *Python for Finance*, 1e. Ch. 3: Introductory Examples."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "gbm",
+    "title": "GBM",
+    "description": "Geometric Brownian Motion: $S(T) = S_0 \\exp[(r - \\tfrac{1}{2}\\sigma^2)T + \\sigma\\sqrt{T}\\,Z]$. The $-\\tfrac{1}{2}\\sigma^2$ Ito correction ensures $E[S(T)] = S_0 e^{rT}$ under the risk-neutral measure. Every MC simulation runs through this formula; without the correction, prices are systematically biased. [^1][^2]",
+    "formula": "**Exact endpoint (static MC):** [^1] [^2]\n\n$$\nS(T) = S_0 \\exp\\!\\left[\\left(r - \\tfrac{\\sigma^2}{2}\\right)T + \\sigma\\sqrt{T}\\,Z\\right]\n$$\n\n**Euler discretization (dynamic MC):** [^3]\n\n$$\nS(t + \\Delta t) = S(t) \\exp\\!\\left[\\left(r - \\tfrac{\\sigma^2}{2}\\right)\\Delta t + \\sigma\\sqrt{\\Delta t}\\,Z_t\\right]\n$$\n\n| Symbol | Meaning |\n|--------|---------|\n| $S_0$ | Stock price today |\n| $r$ | Risk-free rate |\n| $\\sigma$ | Volatility |\n| $T$ | Time to expiry |\n| $(r - \\sigma^2/2)T$ | Drift (deterministic) |\n| $\\sigma\\sqrt{T}\\,Z$ | Diffusion (stochastic) |\n\n---",
+    "theory": "Stock prices can't go negative. $\\exp(\\cdot)$ is always positive regardless of $Z$. [^2]\n\n**The $-\\sigma^2/2$ correction:**\n\n\"Correction term to account for the long-term average growth rate.\" [^1] Derived via Itô's lemma applied to $\\ln S$. \"Beyond the scope of this course.\" [^1] Full derivation in Hull ch15. Ensures $E[S(T)] = S_0 e^{rT}$ under risk-neutral pricing. [^2]\n\n**Why $r$ replaces $\\mu$:**\n\n\"In the context of option pricing, the drift term $\\mu$ is replaced by the risk-free interest rate $r$. This is because option pricing models typically assume that investors are risk-neutral.\" [^1]\n\n**Brownian Motion foundation:**\n\n$W(t)$: continuous, $W(0) = 0$, independent increments, $W(t) - W(s) \\sim N(0, t-s)$. [^1] The $\\sigma\\sqrt{T}\\,Z$ term is $\\sigma \\cdot W(T)$. [^2]\n\n---",
+    "code": "GBM is not a standalone function. It is the core computation inside every pricing function. [^3]\n\n```python\n# P4F ch12, In [65]: shared parameterization\nS0 = 100.\nr = 0.05\nsigma = 0.25\nT = 1.0\nI = 50000\n```\n\n**Static endpoint** (inside `gbm_mcs_stat()`): [^3]\n\n```python\n# P4F ch12, In [66]: core GBM line\nsn = gen_sn(1, I)\nST = S0 * np.exp((r - 0.5 * sigma ** 2) * T\n        + sigma * math.sqrt(T) * sn[1])\n```\n\n**Euler step** (inside `gbm_mcs_dyna()` and `gbm_mcs_amer()`): [^3]\n\n```python\n# P4F ch12, In [69]: core Euler loop\ndt = T / M\nS = np.zeros((M + 1, I))\nS[0] = S0\nsn = gen_sn(M, I)\nfor t in range(1, M + 1):\n    S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt\n        + sigma * math.sqrt(dt) * sn[t])\n```\n\n---",
+    "traces": "$S_0 = 100$, $K = 100$, $r = 0.05$, $\\sigma = 0.2$, $T = 1$ [^1]\n\nDrift: $(0.05 - 0.5 \\times 0.04) \\times 1 = 0.03$\n\nIf $Z = 1.0$: $S(T) = 100 \\times e^{0.23} = 125.86$. Call payoff: $25.86$ [^1]\n\nIf $Z = -1.0$: $S(T) = 100 \\times e^{-0.17} = 84.37$. Call payoff: $0$ [^1]\n\n1M replications: MC = 10.4542. BSM exact = 10.4506. [^1]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "Box-Muller-Transform",
+        "how": "Provides $Z \\sim N(0,1)$ via `gen_sn()`"
+      },
+      {
+        "direction": "To",
+        "component": "MC-European-Static",
+        "how": "`gbm_mcs_stat()` uses single-draw GBM"
+      },
+      {
+        "direction": "To",
+        "component": "MC-Path-Dependent",
+        "how": "`gbm_mcs_dyna()` uses Euler GBM"
+      },
+      {
+        "direction": "To",
+        "component": "LSM-American",
+        "how": "`gbm_mcs_amer()` uses Euler GBM"
+      }
+    ],
+    "references": [
+      {
+        "key": "M7L19",
+        "citation": "ISYE 6644, Module 7, Lesson 19: Brownian Motion."
+      },
+      {
+        "key": "Hull ch15",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 15: The BSM Model."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "greeks",
+    "title": "Greeks",
+    "description": "Sensitivities of the option price to changes in inputs ($\\Delta, \\Gamma, \\Theta, \\nu, \\rho$). BSM provides exact analytical formulas for each Greek. MC uses bump-and-reprice: fix the random seed, compute price(input $\\pm h$), then $\\text{Greek} \\approx (p_{+} - p_{-})/2h$. Five Greeks require roughly 10 extra MC runs. MC Greeks MUST use a fixed seed; otherwise noise from different draws swamps the bump signal. [^1][^2]",
+    "formula": "### BSM Analytical Greeks [^1]\n\n$$\n\\begin{aligned}\n\\Delta_{\\text{call}} &= N(d_1), \\quad \\Delta_{\\text{put}} = N(d_1) - 1 \\\\[4pt]\n\\Gamma &= \\frac{N'(d_1)}{S_0\\,\\sigma\\sqrt{T}} \\\\[4pt]\n\\nu &= S_0\\,N'(d_1)\\sqrt{T} \\\\[4pt]\n\\Theta_{\\text{call}} &= -\\frac{S_0\\,N'(d_1)\\,\\sigma}{2\\sqrt{T}} - rKe^{-rT}N(d_2) \\\\[4pt]\n\\rho_{\\text{call}} &= KTe^{-rT}N(d_2)\n\\end{aligned}\n$$\n\n| Symbol | Meaning |\n|--------|---------|\n| $\\Delta$ | Sensitivity to $S_0$ |\n| $\\Gamma$ | Sensitivity of $\\Delta$ to $S_0$ (2nd order) |\n| $\\nu$ (Vega) | Sensitivity to $\\sigma$ |\n| $\\Theta$ | Sensitivity to time (decay) |\n| $\\rho$ | Sensitivity to $r$ |\n| $d_1, d_2$ | Intermediate from BSM |\n| $N(\\cdot)$ | Standard normal CDF |\n\n### MC Numerical Greeks [^2]\n\n$$\n\\begin{aligned}\n\\bar{\\Delta} &= \\frac{\\bar{V}(S_0 + \\Delta S,\\, \\sigma_0) - \\bar{V}(S_0,\\, \\sigma_0)}{\\Delta S} \\\\[6pt]\n\\bar{\\nu} &= \\frac{\\bar{V}(S_0,\\, \\sigma_0 + \\Delta\\sigma) - \\bar{V}(S_0,\\, \\sigma_0)}{\\Delta\\sigma}\n\\end{aligned}\n$$\n\n### Binomial Greeks (from tree nodes) [^3]\n\n$$\n\\Delta = \\frac{f_{1,1} - f_{1,0}}{S_0 u - S_0 d}\n$$\n\n$$\n\\Gamma = \\frac{\\frac{f_{2,2} - f_{2,1}}{S_0 u^2 - S_0} - \\frac{f_{2,1} - f_{2,0}}{S_0 - S_0 d^2}}{0.5(S_0 u^2 - S_0 d^2)}\n$$\n\n$$\n\\Theta = \\frac{f_{2,1} - f_{0,0}}{2\\Delta t}\n$$\n\nVega and Rho: rebuild tree with perturbed $\\sigma$ or $r$. [^3]\n\n---",
+    "theory": "BSM Greeks are exact closed-form derivatives of the BSM formula. Only valid for European options under BSM assumptions. [^1]\n\nMC Greeks use bump-and-reprice: run the same simulation twice with a small shift in the input. The difference divided by the shift approximates the derivative. [^2]\n\nMC Greeks require **fixed random seed**, same $Z$ draws for both runs. Otherwise noise from different draws swamps the bump signal. [^2]\n\nMC Greeks are noisy (need CIs). BSM Greeks are exact. 5 Greeks = ~10 extra MC runs. [^2]\n\nBinomial Greeks: Delta, Gamma, Theta read directly from tree nodes. Vega and Rho require rebuilding the tree. Deterministic, no CIs needed. [^3]\n\n---",
+    "code": "### Delta: MC numerical [^2]\n\n```python\n# P4F1e ch17: valuation_class.delta()\ndef delta(self, interval=None, accuracy=4):\n    if interval is None:\n        interval = self.underlying.initial_value / 50.\n    value_left = self.present_value(fixed_seed=True)\n    initial_del = self.underlying.initial_value + interval\n    self.underlying.update(initial_value=initial_del)\n    value_right = self.present_value(fixed_seed=True)\n    self.underlying.update(initial_value=initial_del - interval)\n    delta = (value_right - value_left) / interval\n    if delta < -1.0:\n        return -1.0\n    elif delta > 1.0:\n        return 1.0\n    else:\n        return round(delta, accuracy)\n```\n\n```python\n# P4F1e ch17, In [13]\neur_call.delta()\n# Out: 0.4548\n```\n\n### Vega: BSM analytical [^4]\n\n```python\n# P4F1e ch3, Example 3-1\ndef bsm_vega(S0, K, T, r, sigma):\n    ''' Vega of European option in BSM model. '''\n    from math import log, sqrt\n    from scipy import stats\n    S0 = float(S0)\n    d1 = (log(S0 / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))\n    vega = S0 * stats.norm.cdf(d1, 0.0, 1.0) * sqrt(T)\n    return vega\n```\n\n### Vega: MC numerical [^2]\n\n```python\n# P4F1e ch17: valuation_class.vega()\ndef vega(self, interval=0.01, accuracy=4):\n    if interval < self.underlying.volatility / 50.:\n        interval = self.underlying.volatility / 50.\n    value_left = self.present_value(fixed_seed=True)\n    vola_del = self.underlying.volatility + interval\n    self.underlying.update(volatility=vola_del)\n    value_right = self.present_value(fixed_seed=True)\n    self.underlying.update(volatility=vola_del - interval)\n    vega = (value_right - value_left) / interval\n    return round(vega, accuracy)\n```\n\n> `delta()` and `vega()` are methods on `valuation_class`, the parent of both `valuation_mcs_european` and `valuation_mcs_american`. Same Greek methods for both option types.\n\n---",
+    "traces": "European call, $S_0$ range 34-46, computed Delta and Vega across range. [^2]\n\n\"The estimation of Greeks for American options is formally the same as for European options, a major advantage of our approach.\" [^2]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "BSM-Closed-Form",
+        "how": "Analytical Greeks use BSM $d_1, d_2$"
+      },
+      {
+        "direction": "From",
+        "component": "All pricing functions",
+        "how": "MC Greeks bump the price output"
+      },
+      {
+        "direction": "From",
+        "component": "Shared-Inputs",
+        "how": "Each Greek = partial derivative w.r.t. one input"
+      },
+      {
+        "direction": "From",
+        "component": "Binomial-Tree",
+        "how": "Tree Greeks read from nodes or rebuild tree"
+      }
+    ],
+    "references": [
+      {
+        "key": "Hull ch19",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 19: The Greek Letters."
+      },
+      {
+        "key": "P4F1e ch17",
+        "citation": "Hilpisch, Y. *Python for Finance*, 1e. Ch. 17: Dynamic Hedging."
+      },
+      {
+        "key": "Hull ch21",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 21: Basic Numerical Procedures."
+      },
+      {
+        "key": "P4F1e ch3",
+        "citation": "Hilpisch, Y. *Python for Finance*, 1e. Ch. 3: Introductory Examples."
+      }
+    ]
+  },
+  {
+    "id": "lsm-american",
+    "title": "LSM: American Option Pricing",
+    "description": "Least-Squares Monte Carlo (Longstaff-Schwartz). Three phases: (1) Forward: generate $n$ stock price paths using GBM with Euler steps. (2) Backward: at each time step, regress continuation value $E[\\text{hold}|S]$ on polynomial of $S$ for in-the-money paths; exercise if intrinsic $>$ continuation. (3) Price: average discounted optimal payoffs across all paths. The key difficulty: you need the optimal exercise strategy but cannot know it without future prices. LSM approximates via regression. [^1][^2]",
+    "formula": "**American option as optimal stopping problem:** [^1]\n\n$$\nV_{0}=\\sup_{\\tau \\in\\{0, \\Delta t, 2\\Delta t, \\ldots, T\\}} e^{-rT} \\mathbf{E}_{0}^{Q}\\left(h_{\\tau}(S_{\\tau})\\right)\n$$\n\n**Continuation value approximation:** [^1] [^2]\n\n$$\n\\hat{C}_{t,i}=\\sum_{d=1}^{D} \\alpha_{d,t}^{*} \\cdot b_{d}(S_{t,i})\n$$\n\nCoefficients $\\alpha^*$ via least-squares regression. [^2]\n\n| Symbol | Meaning |\n|--------|---------|\n| $\\tau$ | Exercise time |\n| $h_\\tau(S_\\tau)$ | Payoff at exercise |\n| $\\hat{C}_{t,i}$ | Estimated continuation value |\n| $b_d$ | Basis functions (polynomial) |\n\n---",
+    "theory": "American options can be exercised at any time before expiry. The holder must decide at each moment: exercise now or wait (continue). [^3]\n\n\"The key insight of LSM is to use least-squares regression to estimate the conditional expectation of continuation value from cross-sectional information in the simulation.\" [^2]\n\n$V_t(s) = \\max(h_t(s),\\, C_t(s))$ where $C_t(s) = E_t^Q[e^{-r\\Delta t} V_{t+\\Delta t}]$ is the continuation value. \"We cannot use this number directly because it would imply perfect foresight.\" [^1]\n\n---",
+    "code": "```python\n# P4F ch12, In [78]\ndef gbm_mcs_amer(K, option='call'):\n    ''' Valuation of American option in Black-Scholes-Merton\n    by Monte Carlo simulation by LSM algorithm\n    Parameters\n    ==========\n    K: float\n        (positive) strike price of the option\n    option: string\n        type of the option to be valued ('call', 'put')\n    Returns\n    =======\n    C0: float\n        estimated present value of American call option\n    '''\n    dt = T / M\n    df = math.exp(-r * dt)\n    # simulation of index levels\n    S = np.zeros((M + 1, I))\n    S[0] = S0\n    sn = gen_sn(M, I)\n    for t in range(1, M + 1):\n        S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt\n            + sigma * math.sqrt(dt) * sn[t])\n    # case based calculation of payoff\n    if option == 'call':\n        h = np.maximum(S - K, 0)\n    else:\n        h = np.maximum(K - S, 0)\n    # LSM algorithm\n    V = np.copy(h)\n    for t in range(M - 1, 0, -1):\n        reg = np.polyfit(S[t], V[t + 1] * df, 7)\n        C = np.polyval(reg, S[t])\n        V[t] = np.where(C > h[t], V[t + 1] * df, h[t])\n    # MCS estimator\n    C0 = df * np.mean(V[1])\n    return C0\n```\n\n```python\n# P4F ch12, In [79]-[80]\ngbm_mcs_amer(110., option='call')\n# Out: 7.721705606305352\n\ngbm_mcs_amer(110., option='put')\n# Out: 13.609997625418051\n```\n\n> Forward pass: identical Euler loop to `gbm_mcs_dyna()`. Backward pass: `np.polyfit` degree 7, `np.polyval` for continuation estimate, `np.where` for exercise decision. Global `S0, r, sigma, T, I, M`.\n\n---",
+    "traces": "$S_0 = 100$, $K = 110$, $r = 0.05$, $\\sigma = 0.25$, $T = 1.0$, $M = 50$, $I = 50{,}000$ [^1]\n\nAmerican call = 7.72. American put = 13.61. [^1]\n\nEarly exercise premium up to 10% for puts across strikes 80-120. [^1]\n\nThe American price is always $\\geq$ European price because early exercise adds value. [^3]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "MC-Path-Dependent",
+        "how": "Same forward Euler paths"
+      },
+      {
+        "direction": "From",
+        "component": "GBM",
+        "how": "Euler discretization"
+      },
+      {
+        "direction": "To",
+        "component": "Output-Analysis",
+        "how": "CI on MC estimate"
+      },
+      {
+        "direction": "No BSM benchmark",
+        "component": ",",
+        "how": "No closed-form for American options"
+      }
+    ],
+    "references": [
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      },
+      {
+        "key": "LS 2001",
+        "citation": "Longstaff, F.A. & Schwartz, E.S. (2001). Valuing American Options by Simulation."
+      },
+      {
+        "key": "Hull ch21",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 21: Basic Numerical Procedures."
+      }
+    ]
+  },
+  {
+    "id": "mc-european-static",
+    "title": "MC European Static",
+    "description": "Prices European options by drawing terminal stock prices directly from the exact GBM distribution: $S(T) = S_0 \\exp[(r - \\tfrac{1}{2}\\sigma^2)T + \\sigma\\sqrt{T}\\,Z]$. No time stepping needed because payoff depends only on $S(T)$, not the path. Fastest MC variant (`gbm_mcs_stat`). European vanilla results must match BSM to validate the simulation pipeline. [^1][^2]",
+    "formula": "$$\n\\hat C = e^{-rT} \\cdot \\frac{1}{n}\\sum_{i=1}^{n} \\max(S_i(T) - K,\\, 0)\n$$\n\nwhere each $S_i(T) = S_0 \\exp\\!\\left[(r - \\tfrac{\\sigma^2}{2})T + \\sigma\\sqrt{T}\\,Z_i\\right]$. [^1]\n\n| Symbol | Meaning |\n|--------|---------|\n| $\\hat C$ | MC estimate of call price |\n| $e^{-rT}$ | Discount factor to present value |\n| $n$ | Number of simulated paths |\n| $\\max(S_i(T) - K, 0)$ | Call payoff at expiry |\n\nFor puts: replace payoff with $\\max(K - S_i(T), 0)$. [^2]\n\n---",
+    "theory": "Risk-neutral pricing: the option price equals the discounted expected payoff under the risk-neutral measure. [^2]\n\n\"Static\" means one random draw per path. No discretization error because the GBM endpoint has an exact closed-form distribution ($\\log S(T)$ is normal). [^1]\n\nOnly valid when payoff depends on $S(T)$ alone. Asian, barrier, and lookback options require the full path. [^3]\n\n---",
+    "code": "```python\n# P4F ch12, In [66]\ndef gbm_mcs_stat(K):\n    ''' Valuation of European call option in Black-Scholes-Merton\n    by Monte Carlo simulation (of index level at maturity)\n    Parameters\n    ==========\n    K: float\n        (positive) strike price of the option\n    Returns\n    =======\n    C0: float\n        estimated present value of European call option\n    '''\n    sn = gen_sn(1, I)\n    # simulate index level at maturity\n    ST = S0 * np.exp((r - 0.5 * sigma ** 2) * T\n            + sigma * math.sqrt(T) * sn[1])\n    # calculate payoff at maturity\n    hT = np.maximum(ST - K, 0)\n    # calculate MCS estimator\n    C0 = math.exp(-r * T) * np.mean(hT)\n    return C0\n```\n\n```python\n# P4F ch12, In [67]\ngbm_mcs_stat(K=105.)\n# Out: 10.044221852841922\n```\n\n> Uses global `S0, r, sigma, T, I`. Calls `gen_sn(1, I)`, only 1 time step needed.\n\n---",
+    "traces": "$S_0 = 100$, $K = 105$, $r = 0.05$, $\\sigma = 0.25$, $T = 1.0$, $I = 50{,}000$ [^4]\n\nMC call = 10.04. [^4]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "GBM",
+        "how": "Exact endpoint formula"
+      },
+      {
+        "direction": "From",
+        "component": "Box-Muller-Transform",
+        "how": "$Z$ values via `gen_sn()`"
+      },
+      {
+        "direction": "To",
+        "component": "Antithetic-Variates",
+        "how": "`anti_paths=True` in `gen_sn()`"
+      },
+      {
+        "direction": "To",
+        "component": "Control-Variates",
+        "how": "BSM as control"
+      },
+      {
+        "direction": "To",
+        "component": "Output-Analysis",
+        "how": "CI on MC estimate"
+      },
+      {
+        "direction": "Validated by",
+        "component": "BSM-Closed-Form",
+        "how": "MC must converge to BSM"
+      }
+    ],
+    "references": [
+      {
+        "key": "M7L19",
+        "citation": "ISYE 6644, Module 7, Lesson 19: Brownian Motion."
+      },
+      {
+        "key": "Hull ch15",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 15: The BSM Model."
+      },
+      {
+        "key": "Hull ch26",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 26: Exotic Options."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "mc-path-dependent",
+    "title": "MC Path-Dependent",
+    "description": "Prices options whose payoff depends on the entire price path (Asian averages, barrier crossings), not just the endpoint. Uses Euler discretization to simulate $S$ step-by-step: $S_{t+\\Delta t} = S_t \\exp[(r - \\tfrac{1}{2}\\sigma^2)\\Delta t + \\sigma\\sqrt{\\Delta t}\\,Z_t]$. Function `gbm_mcs_dyna` generates full path matrices. More expensive than static MC but required whenever the payoff is path-dependent. [^1][^2]",
+    "formula": "**Euler discretization:** [^1] [^3]\n\n$$\nS(t + \\Delta t) = S(t) \\exp\\!\\left[\\left(r - \\tfrac{\\sigma^2}{2}\\right)\\Delta t + \\sigma\\sqrt{\\Delta t}\\,Z_t\\right]\n$$\n\n**Asian option payoff (arithmetic average):** [^2]\n\n$$\n\\hat C = e^{-rT} \\cdot \\frac{1}{n}\\sum_{i=1}^{n} \\max(\\bar S_i - K,\\, 0), \\quad \\bar S_i = \\frac{1}{m}\\sum_{j=1}^{m} S_i(t_j)\n$$\n\n| Symbol | Meaning |\n|--------|---------|\n| $\\Delta t$ | Time step size $= T/M$ |\n| $M$ | Number of time steps |\n| $Z_t$ | Independent $N(0,1)$ draw at each step |\n| $\\bar S_i$ | Arithmetic average of path $i$ |\n\n---",
+    "theory": "Euler discretization chops the continuous SDE into discrete steps. Discretization bias shrinks as $M$ increases. [^1]\n\nRequired when payoff depends on path: Asian (average price), barrier (threshold crossing), lookback (running max/min). [^2]\n\nNo closed-form solution exists for arithmetic Asian options. MC is the standard approach. [^2]\n\n---",
+    "code": "```python\n# P4F ch12, In [68]-[69]\nM = 50\n\ndef gbm_mcs_dyna(K, option='call'):\n    ''' Valuation of European options in Black-Scholes-Merton\n    by Monte Carlo simulation (of index level paths)\n    Parameters\n    ==========\n    K: float\n        (positive) strike price of the option\n    option : string\n        type of the option to be valued ('call', 'put')\n    Returns\n    =======\n    C0: float\n        estimated present value of European call option\n    '''\n    dt = T / M\n    # simulation of index level paths\n    S = np.zeros((M + 1, I))\n    S[0] = S0\n    sn = gen_sn(M, I)\n    for t in range(1, M + 1):\n        S[t] = S[t - 1] * np.exp((r - 0.5 * sigma ** 2) * dt\n            + sigma * math.sqrt(dt) * sn[t])\n    # case-based calculation of payoff\n    if option == 'call':\n        hT = np.maximum(S[-1] - K, 0)\n    else:\n        hT = np.maximum(K - S[-1], 0)\n    # calculation of MCS estimator\n    C0 = math.exp(-r * T) * np.mean(hT)\n    return C0\n```\n\n```python\n# P4F ch12, In [70]-[71]\ngbm_mcs_dyna(K=110., option='call')\n# Out: 7.950008525028434\n\ngbm_mcs_dyna(K=110., option='put')\n# Out: 12.629934942682004\n```\n\n> Forward loop builds `S[t]` array. `gen_sn(M, I)` produces $(M+1) \\times I$ matrix. Global `S0, r, sigma, T, I, M`.\n\n---",
+    "traces": "$S_0 = 100$, $K = 110$, $r = 0.05$, $\\sigma = 0.25$, $T = 1.0$, $M = 50$, $I = 50{,}000$ [^3]\n\nCall = 7.95, Put = 12.63. [^3]\n\nEuropean payoff via dynamic paths converges to same price as static MC and BSM. [^3]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "GBM",
+        "how": "Euler discretization of GBM SDE"
+      },
+      {
+        "direction": "From",
+        "component": "Box-Muller-Transform",
+        "how": "$Z$ values via `gen_sn(M, I)`"
+      },
+      {
+        "direction": "To",
+        "component": "LSM-American",
+        "how": "Same forward paths, adds backward regression"
+      },
+      {
+        "direction": "To",
+        "component": "Output-Analysis",
+        "how": "CI on MC estimate"
+      }
+    ],
+    "references": [
+      {
+        "key": "M7L19",
+        "citation": "ISYE 6644, Module 7, Lesson 19: Brownian Motion."
+      },
+      {
+        "key": "Hull ch26",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 26: Exotic Options."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "output-analysis",
+    "title": "Output Analysis",
+    "description": "MC estimates are random variables: a price without error bars is a guess. The confidence interval $\\hat{\\theta} \\pm z \\cdot S/\\sqrt{n}$ (where $z = 1.96$ for 95%) quantifies precision. To halve the CI width, need $4\\times$ paths (error $\\sim 1/\\sqrt{n}$). Variance reduction (antithetic + control variates) is cheaper than brute-force path increases. [^1][^2]",
+    "formula": "**Confidence interval:** [^1]\n\n$$\n\\hat\\theta \\pm z_{\\alpha/2} \\cdot \\frac{S}{\\sqrt{n}}\n$$\n\n95% CI: $z_{\\alpha/2} = 1.96$. [^1]\n\n| Symbol | Meaning |\n|--------|---------|\n| $\\hat\\theta$ | MC price estimate (sample mean) |\n| $S$ | Sample standard deviation of payoffs |\n| $n$ | Number of paths |\n| $z_{\\alpha/2}$ | Standard normal quantile |\n\n**Convergence rate:** [^2]\n\n$$\n\\text{error} \\sim \\frac{1}{\\sqrt{n}}\n$$\n\nTo halve the error, need $4\\times$ the paths. [^2]\n\n---",
+    "theory": "Central Limit Theorem: for large $n$, the sample mean is approximately normal regardless of the underlying distribution. This justifies the CI formula. [^2]\n\n\"The CI width tells you how much to trust the result.\" [^1]\n\nThe $1/\\sqrt{n}$ convergence rate is why variance reduction matters: VR achieves the same error with fewer paths, which is cheaper than brute-force increasing $n$. [^1]\n\nCI is valid only if paths are iid. Antithetic variates break iid but the paired-mean estimator restores normality. [^3]\n\n---",
+    "code": "P4F ch12 validates MC against BSM analytically: [^4]\n\n```python\n# P4F ch12, In [72]-[75]: comparing MC to analytical across strikes\nfrom bsm_functions import bsm_call_value\n\nstat_res = np.array(stat_res)\ndyna_res = np.array(dyna_res)\nanal_res = np.array(anal_res)\n\n# Plotting differences: (anal_res - stat_res) / anal_res * 100\n# \"All valuation differences are smaller than 1% absolutely\"\n```\n\n> Formal CI computation uses `scipy.stats.norm.interval(0.95, loc=mean, scale=se)` or direct `mean +/- 1.96 * std / sqrt(n)`.\n\n---",
+    "traces": "Static MC vs BSM across $K = 80, 85, \\ldots, 120$ [^4]\n\n\"All valuation differences are smaller than 1% absolutely. There are both negative and positive value differences.\" [^4]\n\n---",
+    "connections": [
+      {
+        "direction": "From",
+        "component": "All pricing functions",
+        "how": "Produce the sample of payoffs"
+      },
+      {
+        "direction": "From",
+        "component": "Antithetic-Variates",
+        "how": "Reduces $S$, narrows CI"
+      },
+      {
+        "direction": "From",
+        "component": "Control-Variates",
+        "how": "Reduces $S$, narrows CI"
+      },
+      {
+        "direction": "To",
+        "component": "BSM-Closed-Form",
+        "how": "Validates: MC must converge to BSM for Europeans"
+      }
+    ],
+    "references": [
+      {
+        "key": "M10L7",
+        "citation": "ISYE 6644, Module 10, Lesson 7: Output Analysis."
+      },
+      {
+        "key": "M3L2",
+        "citation": "ISYE 6644, Module 3, Lesson 2: Central Limit Theorem."
+      },
+      {
+        "key": "Law ch9",
+        "citation": "Law, A.M. *Simulation Modeling and Analysis*. Ch. 9: Variance Reduction."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      }
+    ]
+  },
+  {
+    "id": "shared-inputs",
+    "title": "Shared Inputs",
+    "description": "Five parameters define every option contract: $S_0$ (stock price), $K$ (strike), $r$ (risk-free rate), $\\sigma$ (volatility), $T$ (time to expiry). Every pricing function reads these same values. MC simulations add two control parameters: $I$ (number of paths, default 50000) and $M$ (time steps, default 50 for dynamic sims). [^1][^2]",
+    "formula": "### $S_0$: Initial Stock Price\n\nCurrent price of the underlying asset. [^1]\n\n```python\n# P4F ch12, In [65]\nS0 = 100.\n```\n\n### $K$: Strike Price\n\nThe price at which the option holder can buy (call) or sell (put). [^1]\n\nThe only parameter that varies across pricing runs in P4F ch12 validation: [^2]\n\n```python\n# P4F ch12, In [73]\nk_list = np.arange(80., 120.1, 5.)\n```\n\n### $r$: Risk-Free Rate\n\nConstant riskless short rate. Replaces drift $\\mu$ under risk-neutral pricing. [^1]\n\n\"In the context of option pricing, the drift term $\\mu$ is replaced by the risk-free interest rate $r$.\" [^3]\n\n```python\n# P4F ch12, In [65]\nr = 0.05\n```\n\n### $\\sigma$: Volatility\n\nStandard deviation of log-returns. Constant in BSM assumptions. [^1]\n\n```python\n# P4F ch12, In [65]\nsigma = 0.25\n```\n\n### $T$: Time to Expiry\n\nMaturity in year fractions. [^1]\n\n```python\n# P4F ch12, In [65]\nT = 1.0\n```\n\n---\n\nThese are not contract parameters but control the MC simulation: [^2]\n\n### $I$: Number of Paths\n\n```python\n# P4F ch12, In [65]\nI = 50000\n```\n\n### $M$: Number of Time Steps\n\nOnly used in dynamic simulation (`gbm_mcs_dyna`, `gbm_mcs_amer`). Static MC uses $M = 1$. [^2]\n\n```python\n# P4F ch12, In [68]\nM = 50\n```\n\n---",
+    "theory": "",
+    "code": "```python\n# P4F ch12, In [65]: complete shared parameterization\nS0 = 100.\nr = 0.05\nsigma = 0.25\nT = 1.0\nI = 50000\nM = 50  # In [68], for dynamic sims\n```\n\n> All pricing functions (`gbm_mcs_stat`, `gbm_mcs_dyna`, `gbm_mcs_amer`) and the BSM benchmark (`bsm_call_value`) use these same values.\n\n---",
+    "traces": "",
+    "connections": [
+      {
+        "direction": "Param",
+        "component": "Used By",
+        "how": "How"
+      },
+      {
+        "direction": "$S_0$",
+        "component": "All functions",
+        "how": "Initial stock level"
+      },
+      {
+        "direction": "$K$",
+        "component": "All functions",
+        "how": "Strike price, only explicit param"
+      },
+      {
+        "direction": "$r$",
+        "component": "GBM drift + discounting",
+        "how": "$(r - \\sigma^2/2)$ and $e^{-rT}$"
+      },
+      {
+        "direction": "$\\sigma$",
+        "component": "GBM diffusion",
+        "how": "$\\sigma\\sqrt{T}\\,Z$"
+      },
+      {
+        "direction": "$T$",
+        "component": "GBM + discounting",
+        "how": "Time horizon"
+      },
+      {
+        "direction": "$I$",
+        "component": "`gen_sn()`",
+        "how": "Number of paths to simulate"
+      },
+      {
+        "direction": "$M$",
+        "component": "`gen_sn()`, Euler loop",
+        "how": "Number of time steps"
+      }
+    ],
+    "references": [
+      {
+        "key": "Hull ch15",
+        "citation": "Hull, J.C. *Options, Futures, and Other Derivatives*. Ch. 15: The BSM Model."
+      },
+      {
+        "key": "P4F ch12",
+        "citation": "Hilpisch, Y. *Python for Finance*. Ch. 12: Monte Carlo Simulation."
+      },
+      {
+        "key": "M7L19",
+        "citation": "ISYE 6644, Module 7, Lesson 19: Brownian Motion."
+      }
+    ]
+  }
+];
+const SIDEBAR = [
+  {
+    "label": "Theory Map",
+    "flowId": "theory-map",
+    "color": "#2E7D32",
+    "children": []
+  },
+  {
+    "label": "Foundation",
+    "flowId": "bsm-internal",
+    "color": "#546E7A",
+    "children": [
+      {
+        "label": "BSM: Phi, basic algebra",
+        "flowId": "bsm-internal",
+        "color": "#1565C0",
+        "children": [
+          {
+            "label": "BSM Closed-Form",
+            "flowId": "bsm-internal",
+            "color": "#1565C0",
+            "compId": "bsm-closed-form"
+          }
+        ]
+      },
+      {
+        "label": "Binomial: u, d, p, dt",
+        "flowId": "binomial-internal",
+        "color": "#7B1FA2",
+        "children": [
+          {
+            "label": "Binomial Tree",
+            "flowId": "binomial-internal",
+            "color": "#7B1FA2",
+            "compId": "binomial-tree"
+          }
+        ]
+      },
+      {
+        "label": "MC: Box-Muller to GBM",
+        "flowId": "mc-foundation",
+        "color": "#E65100",
+        "children": [
+          {
+            "label": "Box-Muller Transform",
+            "flowId": "mc-foundation",
+            "color": "#E65100",
+            "compId": "box-muller-transform"
+          },
+          {
+            "label": "GBM",
+            "flowId": "mc-foundation",
+            "color": "#E65100",
+            "compId": "gbm"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Pricing",
+    "flowId": "mc-internal",
+    "color": "#546E7A",
+    "children": [
+      {
+        "label": "BSM: d1, d2, Phi, price",
+        "flowId": "bsm-internal",
+        "color": "#1565C0"
+      },
+      {
+        "label": "Binomial: forward, backward",
+        "flowId": "binomial-internal",
+        "color": "#7B1FA2"
+      },
+      {
+        "label": "MC: sim, payoff, discount",
+        "flowId": "mc-internal",
+        "color": "#E65100",
+        "children": [
+          {
+            "label": "European Static",
+            "flowId": "mc-internal",
+            "color": "#E65100",
+            "compId": "mc-european-static"
+          },
+          {
+            "label": "Asian/Barrier Dynamic",
+            "flowId": "mc-internal",
+            "color": "#E65100",
+            "compId": "mc-path-dependent"
+          },
+          {
+            "label": "American LSM",
+            "color": "#C62828",
+            "flowId": "lsm-american"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Variance Reduction",
+    "flowId": "variance-reduction",
+    "color": "#C62828",
+    "children": [
+      {
+        "label": "Antithetic Variates",
+        "flowId": "variance-reduction",
+        "color": "#E65100",
+        "compId": "antithetic-variates"
+      },
+      {
+        "label": "Control Variates",
+        "flowId": "variance-reduction",
+        "color": "#E65100",
+        "compId": "control-variates"
+      }
+    ]
+  },
+  {
+    "label": "Greeks (all models)",
+    "flowId": "greeks",
+    "color": "#2E7D32",
+    "children": [
+      {
+        "label": "BSM: analytical",
+        "flowId": "greeks",
+        "color": "#1565C0",
+        "compId": "greeks"
+      },
+      {
+        "label": "Binomial: bump-reprice",
+        "flowId": "greeks",
+        "color": "#7B1FA2",
+        "compId": "greeks"
+      },
+      {
+        "label": "MC: bump-reprice, fix seed",
+        "flowId": "greeks",
+        "color": "#E65100",
+        "compId": "greeks"
+      }
+    ]
+  },
+  {
+    "label": "Output Analysis",
+    "flowId": "output-analysis",
+    "color": "#283593",
+    "children": [
+      {
+        "label": "Confidence Intervals",
+        "flowId": "output-analysis",
+        "color": "#283593",
+        "compId": "output-analysis"
+      },
+      {
+        "label": "Convergence rate",
+        "flowId": "output-analysis",
+        "color": "#283593",
+        "compId": "output-analysis"
+      }
+    ]
+  },
+  {
+    "label": "Model Comparison",
+    "flowId": "model-comparison",
+    "color": "#2E7D32"
+  },
+  {
+    "label": "Program Architecture",
+    "flowId": "program-architecture",
+    "color": "#546E7A",
+    "bottomGroup": true
+  },
+  {
+    "label": "Project Scope",
+    "flowId": "project-scope",
+    "color": "#546E7A",
+    "bottomGroup": true
+  }
+];
+const DRILL_MAP = {
+  "bsm": "bsm-internal",
+  "mc": "mc-internal",
+  "binom": "binomial-internal",
+  "greeks": "greeks",
+  "compare": "model-comparison"
+};
+const NODE_MAP = {
+  "inputs": "shared-inputs",
+  "calc": "bsm-closed-form",
+  "prob": "bsm-closed-form",
+  "parity": "bsm-closed-form",
+  "unif": "box-muller-transform",
+  "boxm": "box-muller-transform",
+  "z": "box-muller-transform",
+  "gbm": "gbm",
+  "stock": "gbm",
+  "bm": "gbm",
+  "stat": "mc-european-static",
+  "dyna": "mc-path-dependent",
+  "amer": "lsm-american",
+  "av": "antithetic-variates",
+  "cv": "control-variates",
+  "ci": "output-analysis",
+  "conv": "output-analysis",
+  "val": "output-analysis",
+  "av_start": "antithetic-variates",
+  "cv_start": "control-variates",
+  "av_mirror": "antithetic-variates",
+  "av_avg": "antithetic-variates",
+  "av_var": "antithetic-variates",
+  "cv_known": "bsm-closed-form",
+  "cv_correct": "control-variates",
+  "cv_astar": "control-variates",
+  "cv_result": "control-variates",
+  "reduced": "output-analysis",
+  "output": "output-analysis",
+  "bsm_d": "greeks",
+  "bsm_g": "greeks",
+  "bsm_t": "greeks",
+  "bsm_v": "greeks",
+  "bsm_r": "greeks",
+  "mc_fix": "greeks",
+  "mc_bump": "greeks",
+  "mc_ci": "output-analysis",
+  "bin_bump": "greeks",
+  "bin_det": "greeks",
+  "exact": "greeks",
+  "noisy": "greeks",
+  "det": "greeks",
+  "params": "binomial-tree",
+  "forward": "binomial-tree",
+  "terminal": "binomial-tree",
+  "backward": "binomial-tree",
+  "euro": "binomial-tree",
+  "convergence": "binomial-tree",
+  "f1": "lsm-american",
+  "f2": "lsm-american",
+  "b1": "lsm-american",
+  "b2": "lsm-american",
+  "b3": "lsm-american",
+  "b4": "lsm-american",
+  "o1": "lsm-american",
+  "o2": "lsm-american",
+  "o3": "lsm-american",
+  "vr": "antithetic-variates",
+  "oa": "output-analysis",
+  "price": "bsm-closed-form",
+  "mc": "mc-european-static",
+  "out": "bsm-closed-form",
+  "greeks_ci": "greeks",
+  "bsm_greeks": "greeks",
+  "mc_greeks": "greeks",
+  "bin_greeks": "greeks",
+  "bsm_pricer": "bsm-closed-form",
+  "mc_pricer": "mc-european-static",
+  "bin_pricer": "binomial-tree",
+  "vr_layer": "antithetic-variates",
+  "oa_layer": "output-analysis"
+};
+
+// Per-flow overrides: when a node ID means different things in different flows
+const FLOW_NODE_MAP = {
+  "binomial-internal": {
+    "price": "binomial-tree"    // "Tree Price" node, not BSM price
+  },
+  "greeks": {
+    "price": "greeks"           // "Option Price from any model" context node
+  }
+};
+
+// ── Map mermaid node IDs to flow-card roleIds (for non-component clickable nodes) ──
+const FLOW_ROLE_MAP = {
+  "bsm-internal": {
+    "r1": "role-pricer",
+    "r2": "role-bench",
+    "r3": "role-cv",
+    "r4": "role-greeks"
+  }
+};
+
+// ── Unified card data per flow ──
+// Card types:
+//   compId card: pulls title/desc/refs from COMPONENTS, supports drillTo + deepDiveTo
+//   standalone card: inline title/formula/desc/source, supports roleId for mermaid click targeting
+const FLOW_CARDS = {
+  "theory-map": [
+    { compId: "shared-inputs", color: "#2E7D32", deepDiveTo: "shared-inputs" },
+    { compId: "bsm-closed-form", color: "#1565C0", drillTo: "bsm-internal", deepDiveTo: "bsm-closed-form" },
+    { compId: "mc-european-static", color: "#E65100", drillTo: "mc-internal", deepDiveTo: "mc-european-static" },
+    { compId: "binomial-tree", color: "#7B1FA2", drillTo: "binomial-internal", deepDiveTo: "binomial-tree" },
+    {
+      title: "BSM Roles: Pricer, Benchmark, CV, Greeks",
+      color: "#546E7A",
+      cardId: "benchmark-cv",
+      desc: "BSM produces the exact European option price and then serves four downstream roles in the library.",
+      subCards: [
+        { label: "1. Standalone Pricer", text: "Use BSM directly for European vanilla. No simulation needed. Exact closed-form answer.", source: "Hull ch15" },
+        { label: "2. Validation Benchmark", text: "MC and Binomial must converge to BSM for European vanilla. If they disagree, the numerical model has a bug.", source: "P4F ch12; Course materials" },
+        { label: "3. Control Variate Anchor", formula: "\\hat{C}_{CV} = \\hat{C}_{MC} + (C_{BSM} - \\hat{C}_{MC}^{\\,\\text{euro}})", text: "BSM exact price anchors the correction. Same random numbers for both sims. Near-perfect correlation eliminates nearly all variance.", source: "M10L8; P4F ch12" },
+        { label: "4. Greeks Baseline", formula: "\\Delta = \\Phi(d_1), \\quad \\Gamma = \\frac{\\phi(d_1)}{S_0\\sigma\\sqrt{T}}, \\quad \\mathcal{V} = S_0\\,\\phi(d_1)\\sqrt{T}", text: "Analytical Greeks from BSM. No bump-and-reprice needed. Exact Delta, Gamma, Theta, Vega, Rho.", source: "Hull ch19" }
+      ],
+      refTags: ["Hull", "P4F", "Course"],
+      links: [
+        { label: "Variance Reduction Flow", action: "navigateToFlow('variance-reduction')" },
+        { label: "Deep Dive", action: "openComponentPanel('control-variates')" },
+        { label: "BSM Deep Dive", action: "openComponentPanel('bsm-closed-form')" }
+      ]
+    }
+  ],
+  "bsm-internal": [
+    {
+      roleId: "role-pricer",
+      title: "Standalone Pricer",
+      formula: "C = S_0\\Phi(d_1) - Ke^{-rT}\\Phi(d_2)",
+      desc: "Direct closed-form price for European calls and puts. No simulation needed.",
+      source: "Hull ch15; P4F1e ch3",
+      color: "#1565C0"
+    },
+    {
+      roleId: "role-bench",
+      title: "Validation Benchmark",
+      formula: "\\text{error} = |\\hat{C}_{MC} - C_{BSM}|",
+      desc: "MC and binomial prices must converge to BSM for European options. Any gap signals a bug.",
+      source: "Hull ch15; Project 4 spec",
+      color: "#1565C0"
+    },
+    {
+      roleId: "role-cv",
+      title: "CV Anchor for MC",
+      formula: "\\hat{C}_{CV} = \\hat{C}_{MC} - \\beta(\\hat{C}^{BSM}_{MC} - C_{BSM})",
+      desc: "Use BSM as a control variate to reduce MC variance. The known BSM price corrects MC noise.",
+      source: "P4F1e ch4; Hull ch21",
+      color: "#1565C0"
+    },
+    {
+      roleId: "role-greeks",
+      title: "Greeks Baseline",
+      formula: "\\Delta = \\Phi(d_1),\\; \\Gamma = \\frac{\\phi(d_1)}{S_0\\sigma\\sqrt{T}}",
+      desc: "Analytical Greeks from BSM are exact. MC and binomial Greeks (bump-and-reprice) must converge to these.",
+      source: "P4F1e ch12; Hull ch19",
+      color: "#1565C0"
+    }
+  ]
+};
+
+// ── Tag colors ──
+const TAG_COLORS = {
+  bsm:      { bg: '#E3F2FD', border: '#1565C0', text: '#0D47A1', label: 'BSM' },
+  mc:       { bg: '#FFF3E0', border: '#E65100', text: '#BF360C', label: 'Monte Carlo' },
+  binom:    { bg: '#F3E5F5', border: '#7B1FA2', text: '#4A148C', label: 'Binomial' },
+  binomial: { bg: '#F3E5F5', border: '#7B1FA2', text: '#4A148C', label: 'Binomial' },
+  shared:   { bg: '#E8F5E9', border: '#2E7D32', text: '#1B5E20', label: 'Shared' },
+};
+
+// (Test diagrams removed; see P27_Code_Architecture_Flowchart.md for code architecture views)
+const _REMOVED_TEST_DIAGRAMS = {
+  'code-arch': `graph TD
+    inputs["**Shared Inputs**<br/>S0, K, r, sigma, T"]:::neutral
+    inputs --> bsm_col
+    inputs --> mc_stat_col
+    inputs --> mc_dyna_col
+    inputs --> mc_amer_col
+    inputs --> bin_col
+    subgraph bsm_col["BSM"]
+        direction TB
+        bsm_fn["bsm_call_value"]:::lookup
+        bsm_fn --> bsm_cdf["scipy.stats.norm.cdf"]:::lookup
+        bsm_cdf --> bsm_price["Call price<br/>Put via put-call parity"]:::lookup
+        bsm_price --> bsm_greeks["BSM Greeks<br/>analytical"]:::lookup
+        bsm_greeks --> bsm_vega["bsm_vega"]:::lookup
+    end
+    subgraph mc_stat_col["MC Static"]
+        direction TB
+        gs1["gen_sn<br/>M=1, I=250000"]:::result
+        gs1 --> stat["gbm_mcs_stat"]:::target
+        stat --> stat_greeks["MC Greeks<br/>bump-and-reprice"]:::target
+    end
+    subgraph mc_dyna_col["MC Dynamic"]
+        direction TB
+        gs2["gen_sn<br/>M=steps, I=paths"]:::result
+        gs2 --> dyna["gbm_mcs_dyna"]:::target
+        dyna --> dyna_greeks["MC Greeks<br/>bump-and-reprice"]:::target
+    end
+    subgraph mc_amer_col["MC American"]
+        direction TB
+        gs3["gen_sn<br/>M=steps, I=paths"]:::result
+        gs3 --> amer["gbm_mcs_amer<br/>Longstaff-Schwartz"]:::target
+        amer --> amer_poly["numpy.polyfit<br/>LSM regression"]:::target
+        amer_poly --> amer_greeks["MC Greeks<br/>bump-and-reprice"]:::target
+    end
+    subgraph bin_col["Binomial"]
+        direction TB
+        bin_fn["binomial_american_put"]:::intermediate
+        bin_fn --> bin_tree["Forward tree build<br/>Backward induction"]:::intermediate
+        bin_tree --> bin_greeks["Binomial Greeks<br/>bump-and-rebuild"]:::intermediate
+    end
+    bsm_vega --> out["**Results + Model Comparison**"]:::result
+    stat_greeks --> out
+    dyna_greeks --> out
+    amer_greeks --> out
+    bin_greeks --> out
+    classDef given fill:#FFCDD2,stroke:#D32F2F,color:#B71C1C
+    classDef secondary fill:#B2DFDB,stroke:#00897B,color:#004D40
+    classDef target fill:#FFE0B2,stroke:#E65100,color:#BF360C
+    classDef intermediate fill:#E1BEE7,stroke:#7B1FA2,color:#4A148C
+    classDef lookup fill:#BBDEFB,stroke:#1565C0,color:#0D47A1
+    classDef result fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20
+    classDef neutral fill:#F5F5F5,stroke:#9E9E9E,color:#424242
+    classDef decision fill:#FFF9C4,stroke:#F9A825,color:#F57F17`,
+
+  'data-flow': `graph LR
+    subgraph IN["Shared Inputs"]
+        direction TB
+        S0["S0: float<br/>initial stock price"]:::given
+        K["K: float<br/>strike price"]:::given
+        r["r: float<br/>risk-free rate"]:::given
+        sig["sigma: float<br/>volatility"]:::given
+        T_in["T: float<br/>time to expiry"]:::given
+    end
+    subgraph BSM_FLOW["BSM Path"]
+        direction TB
+        bsm_fn["bsm_call_value<br/>receives: S0, K, T, r, sigma<br/>computes: d1, d2"]:::lookup
+        bsm_out["returns: call price float<br/>put via parity"]:::lookup
+    end
+    subgraph MC_STAT_FLOW["MC Static Path"]
+        direction TB
+        gen1["gen_sn<br/>receives: M=1, I=250000<br/>returns: I x 1 array of Z"]:::result
+        stat_fn["gbm_mcs_stat<br/>receives: K<br/>computes: S at T via exact GBM<br/>returns: discounted mean payoff"]:::target
+    end
+    subgraph BIN_FLOW["Binomial Path"]
+        direction TB
+        bin_fn["binomial_american_put<br/>receives: S0, K, r, sigma, T, N<br/>Forward: build price tree<br/>Backward: induction<br/>returns: V at 0,0"]:::intermediate
+    end
+    subgraph GREEKS_FLOW["Greeks Layer"]
+        direction TB
+        greeks_bsm["BSM Greeks: analytical<br/>delta = CDF of d1<br/>vega = S0 x PDF of d1 x sqrt T"]:::lookup
+        greeks_num["MC + Binomial Greeks: numerical<br/>bump-and-reprice with fixed seed"]:::target
+    end
+    IN --> BSM_FLOW
+    IN --> MC_STAT_FLOW
+    IN --> BIN_FLOW
+    bsm_fn --> bsm_out
+    gen1 --> stat_fn
+    bsm_out --> greeks_bsm
+    stat_fn --> greeks_num
+    bin_fn --> greeks_num
+    classDef given fill:#FFCDD2,stroke:#D32F2F,color:#B71C1C
+    classDef target fill:#FFE0B2,stroke:#E65100,color:#BF360C
+    classDef intermediate fill:#E1BEE7,stroke:#7B1FA2,color:#4A148C
+    classDef lookup fill:#BBDEFB,stroke:#1565C0,color:#0D47A1
+    classDef result fill:#C8E6C9,stroke:#2E7D32,color:#1B5E20
+    classDef neutral fill:#F5F5F5,stroke:#9E9E9E,color:#424242`
+};
+
+// ── State ──
+let currentFlowId = 'theory-map';
+let currentView = 'overview';
+let breadcrumbs = [{ id: 'theory-map', title: 'Sim Hub' }];
+
+// ── Per-diagram zoom/pan state ──
+const diagramStates = {};  // keyed by flowId+view
+let zoomLevel = 100;
+let panX = 0;
+let panY = 0;
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStartPanX = 0;
+let dragStartPanY = 0;
+
+function getDiagramKey() {
+  return currentFlowId + '::' + currentView;
+}
+
+function saveDiagramState() {
+  diagramStates[getDiagramKey()] = { zoom: zoomLevel, panX, panY };
+}
+
+function restoreDiagramState() {
+  const saved = diagramStates[getDiagramKey()];
+  if (saved) {
+    zoomLevel = saved.zoom;
+    panX = saved.panX;
+    panY = saved.panY;
+  } else {
+    zoomLevel = 100;
+    panX = 0;
+    panY = 0;
+  }
+}
+
+function applyTransform() {
+  const viewport = document.getElementById('diagram-viewport');
+  if (!viewport) return;
+  const scale = zoomLevel / 100;
+  viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  document.getElementById('zoom-slider').value = zoomLevel;
+  document.getElementById('zoom-level').textContent = zoomLevel + '%';
+}
+
+// ── Mermaid init ──
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'base',
+  themeVariables: {
+    primaryColor: '#E3F2FD',
+    primaryBorderColor: '#1565C0',
+    primaryTextColor: '#1a1a2e',
+    lineColor: '#78909C',
+    fontSize: '20px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    nodeBorder: '#546E7A',
+    clusterBorder: '#B0BEC5',
+    clusterBkg: '#FAFAFA',
+  },
+  flowchart: {
+    curve: 'basis',
+    padding: 28,
+    htmlLabels: true,
+    useMaxWidth: false,
+    nodeSpacing: 50,
+    rankSpacing: 70,
+    diagramPadding: 40,
+    wrappingWidth: 350,
+  },
+});
+
+let renderCounter = 0;
+
+// ── Render diagram ──
+async function renderDiagram() {
+  const flow = FLOWS.find(f => f.id === currentFlowId);
+  if (!flow) return;
+
+  // Determine which mermaid code to use
+  let mermaidCode = flow.mermaid;
+
+  // Check for view variants
+  if (currentView !== 'overview' && currentFlowId === 'mc-internal') {
+    const viewKey = `MC Internal |${currentView.charAt(0).toUpperCase() + currentView.slice(1)}`;
+    if (VIEWS[viewKey]) {
+      mermaidCode = VIEWS[viewKey];
+    }
+  }
+
+  const container = document.getElementById('diagram-container');
+  const id = `mermaid-${++renderCounter}`;
+
+  try {
+    const { svg } = await mermaid.render(id, mermaidCode);
+    container.innerHTML = svg;
+
+    const svgEl = container.querySelector('svg');
+    if (svgEl) {
+      // Step 1: Post-process KaTeX in node labels.
+      // Mermaid rendered HTML labels with .ktx spans containing base64-encoded LaTeX.
+      // Now render them with KaTeX for real math display.
+      svgEl.querySelectorAll('.ktx').forEach(span => {
+        try {
+          const tex = atob(span.dataset.b64);
+          katex.render(tex, span, { throwOnError: false, displayMode: false });
+        } catch(e) {
+          // Keep Unicode fallback on error
+        }
+      });
+
+      // Step 2: Expand foreignObject widths to fit KaTeX content.
+      // KaTeX-rendered math is often wider than the Unicode fallback text
+      // that Mermaid used for initial layout. Expand each foreignObject.
+      svgEl.querySelectorAll('foreignObject').forEach(fo => {
+        const inner = fo.querySelector('div');
+        if (inner) {
+          const needed = inner.scrollWidth + 20;
+          const current = parseFloat(fo.getAttribute('width')) || 0;
+          if (needed > current) {
+            const extra = needed - current;
+            fo.setAttribute('width', needed);
+            // Shift x left by half the expansion to keep centered
+            const x = parseFloat(fo.getAttribute('x')) || 0;
+            fo.setAttribute('x', x - extra / 2);
+          }
+        }
+      });
+
+      // Step 3: Size the SVG at natural dimensions. Zoom/pan is CSS transform.
+      const bbox = svgEl.getBBox();
+      const naturalW = bbox.width + 100;
+      const naturalH = bbox.height + 100;
+
+      svgEl.removeAttribute('style');
+      svgEl.setAttribute('viewBox', `${bbox.x - 50} ${bbox.y - 50} ${naturalW} ${naturalH}`);
+      svgEl.setAttribute('width', naturalW);
+      svgEl.setAttribute('height', naturalH);
+
+      // Restore saved zoom/pan for this diagram (or reset)
+      restoreDiagramState();
+      applyTransform();
+    }
+
+    // Attach click handlers to nodes
+    if (svgEl) {
+      const groups = svgEl.querySelectorAll('g[id]');
+      groups.forEach(group => {
+        const match = group.id.match(/^flowchart-([a-z_]+)-\d+$/);
+        if (!match) return;
+        const nodeId = match[1];
+
+        // Check if this node drills to another flow or highlights a panel card (on Theory Map)
+        // Map node IDs to panel card data-comp-id for highlight-on-click
+        var THEORY_CARD_MAP = {
+          'bsm': 'bsm-closed-form',
+          'mc': 'mc-european-static',
+          'binom': 'binomial-tree',
+          'inputs': 'shared-inputs',
+          'benchcv': 'benchmark-cv'
+        };
+        if (currentFlowId === 'theory-map' && (DRILL_MAP[nodeId] || THEORY_CARD_MAP[nodeId])) {
+          group.style.cursor = 'pointer';
+          group.classList.add('clickable-node');
+          group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            var cardCompId = THEORY_CARD_MAP[nodeId] || null;
+
+            if (cardCompId) {
+              var panelCard = document.querySelector('.panel-model-card[data-comp-id="' + cardCompId + '"]');
+              if (panelCard) {
+                panelCard.classList.remove('highlight');
+                void panelCard.offsetWidth;
+                panelCard.classList.add('highlight');
+                panelCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                // Expand the card if collapsed
+                var body = panelCard.querySelector('.pmc-body');
+                var toggle = panelCard.querySelector('.pmc-toggle');
+                if (body && body.classList.contains('hidden')) {
+                  body.classList.remove('hidden');
+                  if (toggle) toggle.classList.remove('collapsed');
+                }
+              }
+            } else if (DRILL_MAP[nodeId]) {
+              // For greeks and compare, just navigate
+              navigateToFlow(DRILL_MAP[nodeId]);
+            }
+          });
+          return;
+        }
+
+        // Check if this node maps to a flow-card role (e.g., BSM roles r1-r4)
+        const flowRoles = FLOW_ROLE_MAP[currentFlowId] || {};
+        if (flowRoles[nodeId]) {
+          group.style.cursor = 'pointer';
+          group.classList.add('clickable-node');
+          group.addEventListener('click', (e) => {
+            e.stopPropagation();
+            highlightFlowCard(flowRoles[nodeId]);
+          });
+        } else {
+          // Check per-flow override first, then global NODE_MAP, then fuzzy match
+          const flowOverrides = FLOW_NODE_MAP[currentFlowId] || {};
+          let compId = flowOverrides[nodeId] || NODE_MAP[nodeId];
+          if (!compId && nodeId.length >= 4) {
+            // Fuzzy fallback: only for node IDs with 4+ chars to avoid false matches
+            const comp = COMPONENTS.find(c => {
+              const cid = c.id.replace(/-/g, '');
+              // Require substantial overlap: nodeId must match at least 5 chars of cid
+              return (nodeId.length >= 5 && cid.includes(nodeId)) ||
+                     (cid.length >= 6 && nodeId.includes(cid.substring(0, 6)));
+            });
+            if (comp) compId = comp.id;
+          }
+          if (compId) {
+            group.style.cursor = 'pointer';
+            group.classList.add('clickable-node');
+            group.addEventListener('click', (e) => {
+              e.stopPropagation();
+              highlightInfoCard(compId);
+            });
+          }
+        }
+      });
+    }
+
+  } catch (err) {
+    container.innerHTML = `<pre style="color:#ef4444;padding:1rem;">Diagram error: ${err}</pre>`;
+  }
+
+  // Update UI
+  updateTopbar(flow);
+  updateClickHint();
+  renderCallouts(flow);
+  renderInfoCards(flow);
+
+  // Auto-fit diagram on load
+  setTimeout(zoomFit, 200);
+}
+
+// ── Info Cards ──
+function getFlowComponents(flowId) {
+  // Check explicit card overrides first
+  if (FLOW_CARDS[flowId]) return FLOW_CARDS[flowId];
+
+  // Walk sidebar tree to find components that belong to this flow
+  const result = [];
+  const seen = new Set();
+  function walk(nodes, parentFlowId, parentColor) {
+    for (const node of nodes) {
+      const thisFlow = node.flowId || parentFlowId;
+      const thisColor = node.color || parentColor || '#546E7A';
+      if (node.compId && thisFlow === flowId && !seen.has(node.compId)) {
+        seen.add(node.compId);
+        result.push({ compId: node.compId, color: thisColor });
+      }
+      if (node.children) walk(node.children, thisFlow, thisColor);
+    }
+  }
+  walk(SIDEBAR, null, '#546E7A');
+
+  // Also check NODE_MAP for components mapped to nodes in this flow's mermaid
+  const flow = FLOWS.find(f => f.id === flowId);
+  if (flow && flow.mermaid) {
+    // Extract all node IDs from mermaid source (any identifier before ( [ or ")
+    const nodeIds = [];
+    const re = new RegExp('(?:^|[>\\s;])([a-z_][a-z0-9_]*)\\s*[\\[\\(\\{"]', 'gm');
+    let im;
+    while ((im = re.exec(flow.mermaid)) !== null) {
+      if (!nodeIds.includes(im[1])) nodeIds.push(im[1]);
+    }
+    for (const nid of nodeIds) {
+      const cid = NODE_MAP[nid];
+      if (cid && !seen.has(cid)) {
+        seen.add(cid);
+        // Determine color from component or default
+        const sidebarNode = findSidebarNode(cid);
+        result.push({ compId: cid, color: sidebarNode ? sidebarNode.color : '#546E7A' });
+      }
+    }
+  }
+  return result;
+}
+
+function findSidebarNode(compId) {
+  function walk(nodes) {
+    for (const n of nodes) {
+      if (n.compId === compId) return n;
+      if (n.children) {
+        const found = walk(n.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  return walk(SIDEBAR);
+}
+
+function renderInfoCards(flow) {
+  // Hide bottom cards on theory-map (cards are in the right panel instead)
+  var wrapper = document.getElementById('info-cards-wrapper');
+  if (currentFlowId === 'theory-map') {
+    wrapper.style.display = 'none';
+    return;
+  }
+  wrapper.style.display = '';
+
+  const container = document.getElementById('info-cards');
+  const items = getFlowComponents(flow.id);
+  if (items.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = items.map(item => {
+    const comp = COMPONENTS.find(c => c.id === item.compId);
+    if (!comp) return '';
+    const refs = (comp.references || []).map(r => r.key).join(', ');
+    return `<div class="info-card" data-comp-id="${comp.id}" style="border-left-color:${item.color};" onclick="openComponentPanel('${comp.id}')">
+      <h4>${comp.title}</h4>
+      <p>${comp.description}</p>
+      ${refs ? `<div class="card-source">${refs}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  renderKatexInElement(container);
+}
+
+function highlightInfoCard(compId) {
+  if (currentFlowId === 'theory-map') {
+    // On theory-map, highlight the panel model card (don't switch to component view)
+    var panelCard = document.querySelector('.panel-model-card[data-comp-id="' + compId + '"]');
+    if (panelCard) {
+      panelCard.classList.remove('highlight');
+      void panelCard.offsetWidth;
+      panelCard.classList.add('highlight');
+      panelCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      // Expand if collapsed
+      var body = panelCard.querySelector('.pmc-body');
+      var toggle = panelCard.querySelector('.pmc-toggle');
+      if (body && body.classList.contains('hidden')) {
+        body.classList.remove('hidden');
+        if (toggle) toggle.classList.remove('collapsed');
+      }
+    }
+    return;
+  }
+
+  // For sub-flows, open component panel and highlight bottom card
+  openComponentPanel(compId);
+  var card = document.querySelector('.info-card[data-comp-id="' + compId + '"]');
+  if (card) {
+    var rect = card.getBoundingClientRect();
+    var visible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+    if (!visible) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    card.classList.remove('highlight');
+    void card.offsetWidth;
+    card.classList.add('highlight');
+  }
+}
+
+function calloutTextToHtml(text) {
+  // Detect markdown table: look for | col | col | pattern with a separator row of |---|---|
+  // Split on " | " boundaries first, then check for table structure
+  // Tables in the data use " > " before the table as a title separator
+  let title = '';
+  let body = text;
+  if (body.includes(' > ')) {
+    const idx = body.indexOf(' > ');
+    title = body.substring(0, idx).trim();
+    body = body.substring(idx + 3).trim();
+  }
+  // Check if body looks like a markdown table (has pipe-delimited rows with a --- separator)
+  if (body.includes('|') && body.match(/\|[-\s]+\|/)) {
+    // Split into rows by finding the pattern: | val | val | ... |
+    // The raw text has no newlines; rows are separated by " | | " (end of one row, start of next)
+    // Actually the format is: | H1 | H2 | H3 | |---|---|---| | v1 | v2 | v3 | | v4 | v5 | v6 |
+    // Split by extracting all cells between pipes
+    const cells = body.split('|').map(s => s.trim()).filter(s => s.length > 0);
+    // Find separator row (all dashes)
+    const sepIdx = cells.findIndex(c => /^[-]+$/.test(c));
+    if (sepIdx > 0) {
+      const numCols = sepIdx; // number of header columns = index of first separator cell
+      // Count consecutive separator cells
+      let sepCount = 0;
+      for (let i = sepIdx; i < cells.length; i++) {
+        if (/^[-]+$/.test(cells[i])) sepCount++;
+        else break;
+      }
+      const headers = cells.slice(0, numCols);
+      const dataCells = cells.slice(sepIdx + sepCount);
+      // Build HTML table
+      let html = '';
+      if (title) html += `<strong>${title}</strong>`;
+      html += '<table class="callout-table"><thead><tr>';
+      headers.forEach(h => { html += `<th>${h}</th>`; });
+      html += '</tr></thead><tbody>';
+      for (let i = 0; i < dataCells.length; i += numCols) {
+        html += '<tr>';
+        for (let j = 0; j < numCols; j++) {
+          html += `<td>${dataCells[i + j] || ''}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      return html;
+    }
+  }
+  // Not a table, return as plain text (with title if present)
+  if (title) return `<strong>${title}</strong> ${body}`;
+  return body;
+}
+
+function renderCallouts(flow) {
+  // Callouts render in the flow-notes section of the right panel
+  // Skip for theory-map: its callouts are rendered inside the panel model cards
+  const flowNotes = document.getElementById('flow-notes');
+  if (currentFlowId === 'theory-map' || !flow.callouts || flow.callouts.length === 0) {
+    flowNotes.style.display = 'none';
+    flowNotes.innerHTML = '';
+    return;
+  }
+  flowNotes.innerHTML = flow.callouts.map(c => {
+    const content = calloutTextToHtml(c.text);
+    const cite = c.source ? ` <span style="color:#78909C;font-size:0.85em">[${c.source}]</span>` : '';
+    return `<div class="fn-item">${content}${cite}</div>`;
+  }).join('');
+  flowNotes.style.display = 'block';
+  renderKatexInElement(flowNotes);
+}
+
+// ── Navigation ──
+var previousFlowId = null;
+
+function navigateToFlow(flowId) {
+  // Push current flow to panel history so back button works across flow navigation
+  // Skip if we are navigating via back button (already popped from history)
+  if (!isGoingBack && currentFlowId && currentFlowId !== flowId) {
+    previousFlowId = currentFlowId;
+    panelHistory.push({ type: 'flow', id: currentFlowId });
+  }
+
+  currentFlowId = flowId;
+  currentView = 'overview';
+
+  const flow = FLOWS.find(f => f.id === flowId);
+  if (!flow) return;
+
+  // Update breadcrumbs (root is always "Sim Hub")
+  if (flowId === 'theory-map') {
+    breadcrumbs = [{ id: 'theory-map', title: 'Sim Hub' }];
+    // Only clear history when returning to theory-map root
+    panelHistory = [];
+  } else {
+    const existing = breadcrumbs.findIndex(b => b.id === flowId);
+    if (existing >= 0) {
+      breadcrumbs = breadcrumbs.slice(0, existing + 1);
+    } else {
+      if (breadcrumbs.length === 0 || breadcrumbs[0].id !== 'theory-map') {
+        breadcrumbs = [{ id: 'theory-map', title: 'Sim Hub' }];
+      }
+      breadcrumbs.push({ id: flowId, title: flow.title });
+    }
+  }
+
+  // Update view toggle visibility
+  const toggle = document.getElementById('view-toggle');
+  const hasViews = flowId === 'mc-internal'; // Expand this as views are added
+  toggle.className = hasViews ? 'visible' : '';
+
+  // Reset view buttons
+  toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  toggle.querySelector('[data-view="overview"]').classList.add('active');
+
+  // Update sidebar active state (per-color highlight)
+  updateSidebarActive(flowId, null);
+
+  renderDiagram();
+
+  // Auto-open panel with flow summary
+  openFlowPanel(flow);
+}
+
+function updateTopbar(flow) {
+  const tag = TAG_COLORS[flow.tag] || TAG_COLORS.shared;
+  document.getElementById('flow-title').innerHTML =
+    `${flow.title} <span class="tag-badge" style="background:${tag.bg};color:${tag.text};border:1px solid ${tag.border}">${tag.label}</span>`;
+  const descEl = document.getElementById('description');
+  descEl.innerHTML = flow.description;
+  renderKatexInElement(descEl);
+
+  const bc = document.getElementById('breadcrumbs');
+  bc.innerHTML = breadcrumbs.map((b, i) =>
+    i < breadcrumbs.length - 1
+      ? `<a onclick="navigateToFlow('${b.id}')">${b.title}</a> / `
+      : b.title
+  ).join('');
+
+  // Context bar: show the Context field from P27_All_Mermaid_Flows.md
+  const ctxBar = document.getElementById('context-bar');
+  if (flow.context) {
+    ctxBar.innerHTML = `<b>Context:</b> ${flow.context}`;
+    renderKatexInElement(ctxBar);
+  } else {
+    ctxBar.innerHTML = '';
+  }
+}
+
+function updateClickHint() {
+  const hint = document.getElementById('click-hint');
+  if (currentFlowId === 'theory-map') {
+    hint.textContent = 'Click any model to drill into its internal flow';
+  } else {
+    hint.textContent = 'Click any node to open its component deep-dive';
+  }
+}
+
+// ── Component Panel ──
+function openFlowPanel(flow) {
+  const panel = document.getElementById('component-panel');
+  panel.classList.add('open');
+  panel.dataset.mode = 'flow';
+
+  // Show back button if we have navigation history
+  const backBtn = document.getElementById('panel-back');
+  backBtn.style.display = panelHistory.length > 0 ? 'inline-flex' : 'none';
+
+  document.getElementById('panel-title').textContent = flow.title;
+  const pdesc = document.getElementById('panel-desc');
+  pdesc.innerHTML = flow.description;
+  renderKatexInElement(pdesc);
+
+  // Hide component tabs for all flows (tabs only make sense for component deep-dives)
+  const tabs = document.getElementById('panel-tabs');
+  const flowNotesEl = document.getElementById('flow-notes');
+  const content = document.getElementById('panel-content');
+  tabs.style.display = 'none';
+
+  // ── Unified card rendering for all flows ──
+  var flowCards = FLOW_CARDS[currentFlowId] || [];
+  var html = '';
+
+  // Context section (non-theory-map flows show flow.context as rendered markdown)
+  if (currentFlowId !== 'theory-map' && flow.context) {
+    html += '<div style="font-size:13px;color:#334155;line-height:1.6;margin-bottom:12px;">' +
+      renderMarkdownContent(flow.context) + '</div>';
+  }
+
+  // Render each card
+  flowCards.forEach(function(card) {
+    var cardHtml = '';
+
+    if (card.compId) {
+      // ── Component-based card: pull data from COMPONENTS ──
+      var comp = COMPONENTS.find(function(c) { return c.id === card.compId; });
+      if (!comp) return;
+
+      var refs = (comp.references || []).map(function(r) {
+        var rc = refColor(r.key);
+        return '<span style="color:' + rc + ';font-weight:600;font-size:0.85em;">' + r.key + '</span>';
+      }).join(', ');
+
+      var linksHtml = '';
+      if (card.drillTo) {
+        linksHtml += '<a class="pmc-flow-link" onclick="navigateToFlow(\'' + card.drillTo + '\')">' + comp.title + ' Internal Flow &#8594;</a>';
+      }
+      if (card.deepDiveTo) {
+        linksHtml += '<a class="pmc-flow-link" style="margin-left:8px;" onclick="openComponentPanel(\'' + card.deepDiveTo + '\')">Deep Dive &#8594;</a>';
+      }
+
+      cardHtml = '<div class="panel-model-card" data-comp-id="' + comp.id + '" style="border-left-color:' + (card.color || '#546E7A') + ';">' +
+        '<div class="pmc-header" onclick="togglePanelCard(this)">' +
+          '<span>' + comp.title + '</span>' +
+          '<span class="pmc-toggle">&#9660;</span>' +
+        '</div>' +
+        '<div class="pmc-body">' +
+          '<p style="margin:0 0 6px;">' + comp.description + '</p>' +
+          (refs ? '<div style="margin-top:4px;">' + refs + '</div>' : '') +
+          (linksHtml ? '<div style="margin-top:6px;">' + linksHtml + '</div>' : '') +
+        '</div>' +
+      '</div>';
+
+    } else {
+      // ── Standalone card: inline data ──
+      var idAttr = '';
+      if (card.cardId) idAttr = ' data-comp-id="' + card.cardId + '"';
+      if (card.roleId) idAttr = ' data-role-id="' + card.roleId + '"';
+
+      var bodyHtml = '';
+
+      // Description
+      if (card.desc) {
+        bodyHtml += '<p style="margin:0 0 6px;font-size:12px;color:#546E7A;">' + card.desc + '</p>';
+      }
+
+      // Formula (top-level, for simple standalone cards)
+      if (card.formula) {
+        bodyHtml += '<div class="katex-display" data-tex="' + escapeAttr(card.formula) + '"></div>';
+      }
+
+      // Sub-cards (for composite cards like Benchmark+CV roles)
+      if (card.subCards) {
+        card.subCards.forEach(function(sc) {
+          bodyHtml += '<div style="margin:8px 0;padding:6px 8px;background:#f8fafc;border-radius:4px;border-left:3px solid #37474F;">' +
+            '<div style="font-weight:600;font-size:12px;color:#263238;margin-bottom:3px;">' + sc.label + '</div>' +
+            (sc.formula ? '<div class="katex-display" data-tex="' + escapeAttr(sc.formula) + '"></div>' : '') +
+            '<div style="font-size:11px;color:#455A64;">' + sc.text + '</div>' +
+            (sc.source ? '<div style="font-size:11px;color:#78909C;margin-top:2px;">[' + sc.source + ']</div>' : '') +
+          '</div>';
+        });
+      }
+
+      // Source (for simple standalone cards without sub-cards)
+      if (card.source && !card.subCards) {
+        bodyHtml += '<span style="color:#78909C;font-size:0.85em;">[' + card.source + ']</span>';
+      }
+
+      // Reference tags
+      if (card.refTags) {
+        bodyHtml += '<div style="margin-top:4px;">' + card.refTags.map(function(tag) {
+          return '<span style="color:' + refColor(tag) + ';font-weight:600;font-size:0.85em;">' + tag + '</span>';
+        }).join(', ') + '</div>';
+      }
+
+      // Action links
+      if (card.links) {
+        bodyHtml += '<div style="margin-top:6px;">' + card.links.map(function(lnk, i) {
+          return '<a class="pmc-flow-link"' + (i > 0 ? ' style="margin-left:8px;"' : '') + ' onclick="' + escapeAttr(lnk.action) + '">' + lnk.label + ' &#8594;</a>';
+        }).join('') + '</div>';
+      }
+
+      cardHtml = '<div class="panel-model-card"' + idAttr + ' style="border-left-color:' + (card.color || '#546E7A') + ';">' +
+        '<div class="pmc-header" onclick="togglePanelCard(this)">' +
+          '<span>' + (card.title || '') + '</span>' +
+          '<span class="pmc-toggle">&#9660;</span>' +
+        '</div>' +
+        '<div class="pmc-body">' + bodyHtml + '</div>' +
+      '</div>';
+    }
+
+    html += cardHtml;
+  });
+
+  // Callouts (theory-map renders them inline at bottom; other flows use flow-notes section)
+  if (currentFlowId === 'theory-map') {
+    flowNotesEl.style.display = 'none';
+    if (flow.callouts && flow.callouts.length > 0) {
+      html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e0e0e0;">';
+      html += flow.callouts.map(function(c) {
+        return '<div style="font-size:12px;">' + calloutTextToHtml(c.text) +
+          (c.source ? ' <span style="color:#78909C;font-size:0.85em;">[' + c.source + ']</span>' : '') + '</div>';
+      }).join('');
+      html += '</div>';
+    }
+  }
+
+  // Hint for flows with no cards
+  if (flowCards.length === 0) {
+    html += '<div style="font-size:12px;color:#78909C;margin-top:8px;">Click a node to see its deep-dive.</div>';
+  }
+
+  content.innerHTML = html;
+  renderKatexInElement(content);
+}
+
+function togglePanelCard(headerEl) {
+  var card = headerEl.parentElement;
+  var body = headerEl.nextElementSibling;
+  var toggle = headerEl.querySelector('.pmc-toggle');
+  body.classList.toggle('hidden');
+  toggle.classList.toggle('collapsed');
+  // Pulse highlight on click
+  card.classList.remove('highlight');
+  void card.offsetWidth;
+  card.classList.add('highlight');
+}
+
+// Highlight a flow-card by its roleId (used when clicking mermaid role nodes)
+function highlightFlowCard(roleId) {
+  var card = document.querySelector('.panel-model-card[data-role-id="' + roleId + '"]');
+  if (!card) return;
+  // Expand if collapsed
+  var body = card.querySelector('.pmc-body');
+  var toggle = card.querySelector('.pmc-toggle');
+  if (body && body.classList.contains('hidden')) {
+    body.classList.remove('hidden');
+    if (toggle) toggle.classList.remove('collapsed');
+  }
+  // Scroll into view
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Pulse highlight
+  card.classList.remove('highlight');
+  void card.offsetWidth;
+  card.classList.add('highlight');
+}
+
+function openComponentPanel(compId) {
+  var comp = COMPONENTS.find(function(c) { return c.id === compId; });
+  if (!comp) return;
+
+  // Push current panel state to history for back button
+  var panel = document.getElementById('component-panel');
+  if (panel.dataset.mode === 'flow') {
+    panelHistory.push({ type: 'flow', id: currentFlowId });
+  } else if (panel.dataset.mode === 'component') {
+    var prevTitle = document.getElementById('panel-title').textContent;
+    var prevComp = COMPONENTS.find(function(c) { return c.title === prevTitle; });
+    if (prevComp && prevComp.id !== compId) {
+      panelHistory.push({ type: 'component', id: prevComp.id });
+    }
+  }
+
+  panel.classList.add('open');
+  panel.dataset.mode = 'component';
+
+  var backBtn = document.getElementById('panel-back');
+  backBtn.style.display = panelHistory.length > 0 ? 'inline-flex' : 'none';
+
+  document.getElementById('panel-tabs').style.display = 'flex';
+  document.getElementById('flow-notes').style.display = 'none';
+
+  document.getElementById('panel-title').textContent = comp.title;
+  var pdesc = document.getElementById('panel-desc');
+  pdesc.innerHTML = comp.description;
+  renderKatexInElement(pdesc);
+
+  updateSidebarActive(null, compId);
+
+  var activeTab = document.querySelector('#panel-tabs button.active');
+  var currentTab = activeTab ? activeTab.dataset.tab : 'formula';
+  showPanelTab(currentTab, comp);
+}
+
+var panelHistory = [];
+var isGoingBack = false;
+
+function panelGoBack() {
+  if (panelHistory.length === 0) return;
+
+  var prev = panelHistory.pop();
+
+  if (prev.type === 'flow') {
+    // Navigate back to the previous flow (full re-render including diagram)
+    // Set flag so navigateToFlow doesn't push a duplicate history entry
+    isGoingBack = true;
+    navigateToFlow(prev.id);
+    isGoingBack = false;
+  } else if (prev.type === 'component') {
+    // Re-open component without pushing to history again
+    var comp = COMPONENTS.find(function(c) { return c.id === prev.id; });
+    if (comp) {
+      var panel = document.getElementById('component-panel');
+      panel.classList.add('open');
+      panel.dataset.mode = 'component';
+      document.getElementById('panel-tabs').style.display = 'flex';
+      document.getElementById('flow-notes').style.display = 'none';
+      document.getElementById('panel-title').textContent = comp.title;
+      var pdesc = document.getElementById('panel-desc');
+      pdesc.innerHTML = comp.description;
+      renderKatexInElement(pdesc);
+      var activeTab = document.querySelector('#panel-tabs button.active');
+      showPanelTab(activeTab ? activeTab.dataset.tab : 'formula', comp);
+    }
+  }
+
+  // Update back button visibility
+  document.getElementById('panel-back').style.display = panelHistory.length > 0 ? 'inline-flex' : 'none';
+}
+
+function closeComponentPanel() {
+  document.getElementById('component-panel').classList.remove('open');
+  document.getElementById('panel-title').textContent = '';
+  document.getElementById('panel-desc').textContent = '';
+  document.getElementById('panel-content').innerHTML = '';
+}
+
+function showPanelTab(tab, comp) {
+  if (!comp) {
+    const title = document.getElementById('panel-title').textContent;
+    comp = COMPONENTS.find(c => c.title === title);
+  }
+  if (!comp) return;
+
+  const content = document.getElementById('panel-content');
+  let html = '';
+
+  switch (tab) {
+    case 'formula':
+      html = renderMarkdownContent(comp.formula || 'No formula content yet.', comp.references);
+      break;
+    case 'theory':
+      html = renderMarkdownContent(comp.theory || 'No theory content yet.', comp.references);
+      break;
+    case 'code':
+      html = renderMarkdownContent(comp.code || 'No code content yet.', comp.references);
+      break;
+    case 'traces':
+      html = renderMarkdownContent(comp.traces || 'No traces content yet.', comp.references);
+      break;
+    case 'connections':
+      if (comp.connections && comp.connections.length > 0) {
+        html = comp.connections.map(c => {
+          // Make component names clickable if they match a known component
+          const targetComp = COMPONENTS.find(tc => {
+            const name = c.component.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const tid = tc.id.replace(/-/g, '');
+            return name.includes(tid) || tid.includes(name.substring(0, 5));
+          });
+          const compLink = targetComp
+            ? `<a class="wiki-link" onclick="openComponentPanel('${targetComp.id}')">${c.component}</a>`
+            : `<b>${c.component}</b>`;
+          // Render LaTeX in "how" text only; direction is plain text
+          const howHtml = renderMarkdownContent(c.how, comp.references);
+          return `<div class="conn-row"><span class="conn-arrow">${c.direction}</span> ${compLink}: ${howHtml}</div>`;
+        }).join('');
+      } else {
+        html = 'No connections documented yet.';
+      }
+      break;
+  }
+
+  // Add only references actually cited in this tab's raw content
+  if (comp.references && comp.references.length > 0) {
+    const rawContent = tab === 'connections'
+      ? (comp.connections || []).map(c => c.how).join(' ')
+      : (comp[tab] || '');
+    const citedIndices = new Set();
+    const fnPattern = /\[\^(\d+)\]/g;
+    let fnMatch;
+    while ((fnMatch = fnPattern.exec(rawContent)) !== null) {
+      citedIndices.add(parseInt(fnMatch[1]) - 1);
+    }
+    const tabRefs = comp.references.filter((r, i) => citedIndices.has(i));
+    if (tabRefs.length > 0) {
+      html += `<div class="ref-list"><b>References</b><ul>${
+        tabRefs.map(r => {
+          const rc = refColor(r.key);
+          return `<li style="border-left:3px solid ${rc};padding-left:8px;margin-bottom:6px;"><b style="color:${rc}">${r.key}</b>: ${r.citation}</li>`;
+        }).join('')
+      }</ul></div>`;
+    }
+  }
+
+  content.innerHTML = html;
+
+  // Render KaTeX for any $...$ or $$...$$ in the content
+  renderKatexInElement(content);
+}
+
+function renderMarkdownContent(md, refs) {
+  if (!md) return '';
+  let html = md;
+  const refArray = refs || [];
+
+  // Code blocks: ```python ... ```
+  html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (m, lang, code) =>
+    `<pre><code class="language-${lang || ''}">${escapeHtml(code.trim())}</code></pre>`
+  );
+
+  // Display math: $$ ... $$
+  html = html.replace(/\$\$([\s\S]*?)\$\$/g, (m, tex) =>
+    `<div class="katex-display" data-tex="${escapeAttr(tex.trim())}"></div>`
+  );
+
+  // Inline math: $ ... $ (but not $$)
+  // Skip currency patterns like $4.99 (digit after opening $, no closing $ nearby)
+  html = html.replace(/(?<!\$)\$(?!\$)((?!\d+\.\d+\s)[^$]+?)\$(?!\$)/g, (m, tex) =>
+    `<span class="katex-inline" data-tex="${escapeAttr(tex.trim())}"></span>`
+  );
+
+  // Bold
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+
+  // Tables
+  html = html.replace(/(\|.+\|\n)(\|[-| :]+\|\n)((?:\|.+\|\n?)+)/g, (m, header, sep, body) => {
+    const headers = header.split('|').filter(c => c.trim()).map(c => `<th>${c.trim()}</th>`).join('');
+    const rows = body.trim().split('\n').map(row => {
+      const cells = row.split('|').filter(c => c.trim()).map(c => `<td>${c.trim()}</td>`).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+  });
+
+  // Headings ### -> section title
+  html = html.replace(/^###\s+(.+)$/gm, '<div class="panel-section-title">$1</div>');
+
+  // Horizontal rules (--- or more dashes)
+  html = html.replace(/^-{3,}$/gm, '<hr style="border:none;border-top:1px solid #e0e0e0;margin:12px 0;">');
+
+  // Blockquotes
+  html = html.replace(/^>\s+(.+)$/gm, '<div style="padding:6px 12px;border-left:3px solid #3182CE;background:#EBF8FF;border-radius:4px;margin:8px 0;font-size:13px;">$1</div>');
+
+  // Footnote refs: resolve [^N] to actual reference key from component data
+  html = html.replace(/\[\^(\d+)\]/g, (m, num) => {
+    const idx = parseInt(num) - 1;
+    if (refArray[idx]) {
+      const rc = refColor(refArray[idx].key);
+      return `<sup class="ref-tag" style="color:${rc};background:${rc}15;border:1px solid ${rc}40;" title="${refArray[idx].citation || ''}">[${refArray[idx].key}]</sup>`;
+    }
+    return `<sup>[${num}]</sup>`;
+  });
+
+  // Paragraphs (double newline)
+  html = html.replace(/\n\n/g, '</p><p>');
+  if (!html.startsWith('<')) html = '<p>' + html + '</p>';
+
+  return html;
+}
+
+function refColor(key) {
+  if (!key) return '#546E7A';
+  const k = key.toLowerCase();
+  if (k.includes('hull') || k.includes('bsm')) return '#1565C0';
+  if (k.includes('p4f') || k.includes('hilpisch')) return '#E65100';
+  if (k.includes('ftp') || k.includes('binomial')) return '#7B1FA2';
+  if (k.includes('law') || k.includes('m10') || k.includes('m7') || k.includes('m2') || k.includes('m3')) return '#2E7D32';
+  return '#546E7A';
+}
+
+function renderKatexInElement(el) {
+  // Display math
+  el.querySelectorAll('.katex-display').forEach(node => {
+    try {
+      katex.render(node.dataset.tex, node, { displayMode: true, throwOnError: false });
+    } catch(e) { node.textContent = node.dataset.tex; }
+  });
+  // Inline math
+  el.querySelectorAll('.katex-inline').forEach(node => {
+    try {
+      katex.render(node.dataset.tex, node, { displayMode: false, throwOnError: false });
+    } catch(e) { node.textContent = node.dataset.tex; }
+  });
+  // KTX spans (from latex_to_unicode, used in descriptions and Mermaid labels)
+  el.querySelectorAll('.ktx').forEach(span => {
+    try {
+      const tex = atob(span.dataset.b64);
+      katex.render(tex, span, { displayMode: false, throwOnError: false });
+    } catch(e) {}
+  });
+  // Dollar-sign delimited LaTeX in text content ($...$)
+  // Walk text nodes and replace $...$ with rendered KaTeX spans
+  renderDollarLatex(el);
+}
+
+function renderDollarLatex(el) {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach(node => {
+    const text = node.textContent;
+    if (!text.includes('$')) return;
+    // Skip nodes inside already-rendered KaTeX or code/pre elements
+    const parent = node.parentElement;
+    if (!parent) return;
+    if (parent.closest('.katex, pre, code')) return;
+    // Match $...$ (non-greedy, no nested $)
+    const regex = /\$([^$]+)\$/g;
+    if (!regex.test(text)) return;
+    regex.lastIndex = 0;
+    const frag = document.createDocumentFragment();
+    let lastIdx = 0, match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIdx) {
+        frag.appendChild(document.createTextNode(text.slice(lastIdx, match.index)));
+      }
+      const span = document.createElement('span');
+      span.className = 'katex-dollar';
+      try {
+        katex.render(match[1], span, { displayMode: false, throwOnError: false });
+      } catch(e) {
+        span.textContent = match[1];
+      }
+      frag.appendChild(span);
+      lastIdx = regex.lastIndex;
+    }
+    if (lastIdx < text.length) {
+      frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+    }
+    parent.replaceChild(frag, node);
+  });
+}
+
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeAttr(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// ── Sidebar color map (matches p27-wiki.html OTe) ──
+const SIDEBAR_COLORS = {
+  '#1565C0': { dot: '#1565C0', text: '#0D47A1', bg14: 'rgba(21,101,192,0.08)' },  // BSM
+  '#E65100': { dot: '#E65100', text: '#BF360C', bg14: 'rgba(230,81,0,0.08)' },     // MC
+  '#7B1FA2': { dot: '#7B1FA2', text: '#4A148C', bg14: 'rgba(123,31,162,0.08)' },   // Binomial
+  '#2E7D32': { dot: '#2E7D32', text: '#1B5E20', bg14: 'rgba(46,125,50,0.08)' },    // Shared
+  '#546E7A': { dot: '#546E7A', text: '#263238', bg14: 'rgba(84,110,122,0.08)' },    // Architecture
+  '#C62828': { dot: '#C62828', text: '#B71C1C', bg14: 'rgba(198,40,40,0.08)' },     // VR/LSM
+  '#283593': { dot: '#283593', text: '#1A237E', bg14: 'rgba(40,53,147,0.08)' },     // Output
+};
+
+function getSidebarColor(hex) {
+  return SIDEBAR_COLORS[hex] || SIDEBAR_COLORS['#546E7A'];
+}
+
+// ── Sidebar ──
+// Flow chain: these labels form the main pipeline (bold left line)
+const FLOW_CHAIN_LABELS = new Set([
+  'Shared Inputs (S0, K, r, sigma, T)',
+  'Foundation', 'Pricing', 'Variance Reduction (MC only)',
+  'Greeks (all models)', 'Output Analysis (MC only)', 'Model Comparison'
+]);
+
+function buildSidebar() {
+  const container = document.getElementById('sidebar-tree');
+  const mainNodes = SIDEBAR.filter(n => !n.bottomGroup);
+  const bottomNodes = SIDEBAR.filter(n => n.bottomGroup);
+  let html = buildTreeHTML(mainNodes, 0);
+  if (bottomNodes.length > 0) {
+    html += `<div style="flex:1;min-height:16px;"></div>`;
+    html += `<div style="border-top:1px solid #e0e0e0;margin:4px 12px 0;"></div>`;
+    html += buildTreeHTML(bottomNodes, 0);
+  }
+  container.innerHTML = html;
+}
+
+function buildTreeHTML(nodes, depth) {
+  return nodes.map((node, i) => {
+    const isLast = i === nodes.length - 1;
+    const connector = depth === 0 ? '' : (isLast ? '\u2514\u2500\u2500 ' : '\u251C\u2500\u2500 ');
+    const hasChildren = node.children && node.children.length > 0;
+    const flowAttr = node.flowId ? `data-flow="${node.flowId}"` : '';
+    const compAttr = node.compId ? `data-comp="${node.compId}"` : '';
+    const colorHex = node.color || '#546E7A';
+    const sc = getSidebarColor(colorHex);
+    const padLeft = depth * 18 + 8;
+    const clickable = node.flowId || node.compId;
+    const isChain = depth === 0 && FLOW_CHAIN_LABELS.has(node.label);
+    // Check if next sibling is also a chain node (to continue the line)
+    const nextNode = i < nodes.length - 1 ? nodes[i + 1] : null;
+    const nextIsChain = nextNode && depth === 0 && FLOW_CHAIN_LABELS.has(nextNode.label);
+    const chainClass = isChain ? (nextIsChain ? ' flow-chain flow-chain-cont' : ' flow-chain flow-chain-end') : '';
+
+    let html = `<div class="tree-item${chainClass}">`;
+    html += `<div class="tree-node" ${flowAttr} ${compAttr} data-color="${colorHex}" `;
+    html += `style="padding:5px 8px 5px ${padLeft}px;cursor:${clickable ? 'pointer' : 'default'};color:${sc.text};background:${sc.bg14};border-right-color:${sc.dot};">`;
+    if (depth > 0) {
+      html += `<span class="tree-prefix">${connector}</span>`;
+    }
+    html += `<span class="tree-dot" style="background:${colorHex}"></span>`;
+    html += `<span class="tree-label">${node.label}</span>`;
+    html += `</div>`;
+
+    if (hasChildren) {
+      html += `<div class="tree-children">`;
+      html += buildTreeHTML(node.children, depth + 1);
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+  }).join('');
+}
+
+// ── Zoom/Pan ──
+function setZoom(level, pivotX, pivotY) {
+  const oldZoom = zoomLevel;
+  zoomLevel = Math.max(30, Math.min(250, level));
+  // If pivot point given (e.g. mouse position), adjust pan so that point stays fixed
+  if (pivotX !== undefined && pivotY !== undefined) {
+    const oldScale = oldZoom / 100;
+    const newScale = zoomLevel / 100;
+    panX = pivotX - (pivotX - panX) * (newScale / oldScale);
+    panY = pivotY - (pivotY - panY) * (newScale / oldScale);
+  }
+  saveDiagramState();
+  applyTransform();
+}
+
+function zoomFit() {
+  const svgEl = document.querySelector('#diagram-container svg');
+  const area = document.getElementById('diagram-area');
+  if (!svgEl) return;
+  const svgW = parseFloat(svgEl.getAttribute('width')) || 800;
+  const svgH = parseFloat(svgEl.getAttribute('height')) || 600;
+  const areaW = area.clientWidth - 48;
+  const areaH = area.clientHeight - 48;
+  const fitLevel = Math.round(Math.min(areaW / svgW, areaH / svgH) * 100);
+  zoomLevel = Math.max(30, Math.min(250, fitLevel));
+  panX = 0;
+  panY = 0;
+  saveDiagramState();
+  applyTransform();
+}
+
+// ── Event listeners ──
+document.getElementById('zoom-out').addEventListener('click', () => setZoom(zoomLevel - 15));
+document.getElementById('zoom-in').addEventListener('click', () => setZoom(zoomLevel + 15));
+document.getElementById('zoom-slider').addEventListener('input', (e) => setZoom(parseInt(e.target.value)));
+document.getElementById('zoom-fit').addEventListener('click', zoomFit);
+
+// Mouse wheel zoom on diagram area (zoom towards cursor)
+const diagramArea = document.getElementById('diagram-area');
+diagramArea.addEventListener('wheel', (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const rect = diagramArea.getBoundingClientRect();
+    const pivotX = e.clientX - rect.left;
+    const pivotY = e.clientY - rect.top;
+    setZoom(zoomLevel + (e.deltaY < 0 ? 10 : -10), pivotX, pivotY);
+  }
+}, { passive: false });
+
+// Mouse-drag panning
+diagramArea.addEventListener('mousedown', (e) => {
+  // Only pan on left-click, not on nodes
+  if (e.button !== 0) return;
+  if (e.target.closest('.clickable-node')) return;
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragStartPanX = panX;
+  dragStartPanY = panY;
+  diagramArea.classList.add('dragging');
+  e.preventDefault();
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  panX = dragStartPanX + (e.clientX - dragStartX);
+  panY = dragStartPanY + (e.clientY - dragStartY);
+  applyTransform();
+});
+
+window.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    diagramArea.classList.remove('dragging');
+    saveDiagramState();
+  }
+});
+
+// Panel close button removed — panel stays open always
+
+document.querySelectorAll('#view-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#view-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    renderDiagram();
+  });
+});
+
+document.querySelectorAll('#panel-tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#panel-tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    showPanelTab(btn.dataset.tab);
+  });
+});
+
+// ── Sidebar active highlight (per-color, matching p27-wiki.html) ──
+function updateSidebarActive(flowId, compId) {
+  // All nodes keep their color tint + right border always.
+  // Active node just gets bolder weight.
+  document.querySelectorAll('.tree-node').forEach(n => {
+    n.classList.remove('active');
+    n.style.fontWeight = '400';
+  });
+  const selector = flowId
+    ? `.tree-node[data-flow="${flowId}"]`
+    : `.tree-node[data-comp="${compId}"]`;
+  document.querySelectorAll(selector).forEach(n => {
+    n.classList.add('active');
+    n.style.fontWeight = '600';
+  });
+}
+
+// ── Init ──
+buildSidebar();
+
+// Attach sidebar click handlers: always navigate to flow, then open comp panel if present
+document.querySelectorAll('.tree-node').forEach(node => {
+  node.addEventListener('click', () => {
+    const flowId = node.dataset.flow;
+    const compId = node.dataset.comp;
+    if (flowId) navigateToFlow(flowId);
+    if (compId) openComponentPanel(compId);
+  });
+  // Hover: slightly darken the existing tint
+  node.addEventListener('mouseenter', function() {
+    const colorHex = this.dataset.color || '#546E7A';
+    const sc = getSidebarColor(colorHex);
+    this.style.background = sc.bg14.replace('0.08', '0.16');
+  });
+  node.addEventListener('mouseleave', function() {
+    const colorHex = this.dataset.color || '#546E7A';
+    const sc = getSidebarColor(colorHex);
+    this.style.background = sc.bg14;
+  });
+});
+
+navigateToFlow('theory-map');
+</script>
+</body>
+</html>
